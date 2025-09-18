@@ -1,0 +1,34 @@
+[Unit]
+Description=Webitel Media exporter
+After=network.target consul.service rabbitmq-server.service postgresql.service
+
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=webitel
+Group=webitel
+
+# Restart policy
+Restart=on-failure
+RestartSec=5
+
+ExecStart=/usr/local/bin/webitel-media-exporter api
+
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStartSec=0
+TimeoutStopSec=30
+
+# Resource limits
+LimitNOFILE=64000
+LimitNPROC=4096
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=webitel-media-exporter
+
+[Install]
+WantedBy=multi-user.target
