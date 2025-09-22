@@ -7,8 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
+	"github.com/disintegration/imaging"
 	"github.com/johnfercher/maroto/pkg/consts"
 	"github.com/johnfercher/maroto/pkg/pdf"
 	"github.com/johnfercher/maroto/pkg/props"
@@ -17,6 +19,7 @@ import (
 	"github.com/webitel/media-exporter/auth"
 	"github.com/webitel/media-exporter/internal/errors"
 	"github.com/webitel/media-exporter/internal/server/interceptor"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -29,45 +32,39 @@ type MediaExporterService struct {
 func GetAutherOutOfContext(ctx context.Context) auth.Auther {
 	return ctx.Value(interceptor.SessionHeader).(auth.Auther)
 }
-func (m *MediaExporterService) ExportPDF(
-	ctx context.Context,
-	req *mediaexporter.ExportRequest,
-) (*mediaexporter.ExportResponse, error) {
 
+func (m *MediaExporterService) ExportPDF(ctx context.Context, req *mediaexporter.ExportRequest) (*mediaexporter.ExportResponse, error) {
 	var channel = map[string]storage.UploadFileChannel{
 		"screenshot":    storage.UploadFileChannel_ScreenshotChannel,
 		"screensharing": storage.UploadFileChannel_ScreenSharingChannel,
 	}
-
 	enumChannel, ok := channel[req.Channel]
 	if !ok {
-		return nil, fmt.Errorf("invalid chanString: %s", req.Channel)
+		return nil, fmt.Errorf("invalid channel: %s", req.Channel)
 	}
 
-	//// 1. Redis check
-	//exists, err := m.app.cache.Exists(strconv.FormatInt(req.From, 10), strconv.FormatInt(req.To, 10), req.Channel)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//if exists {
-	//	return nil, errors.Internal("export already in progress")
-	//}
-	//
-	//err = m.app.cache.SetRequest(strconv.FormatInt(req.From, 10), strconv.FormatInt(req.To, 10), req.Channel, 30*time.Minute)
-	//if err != nil {
-	//	return nil, err
-	//}
+	//	//// 1. Redis check
+	//	//exists, err := m.app.cache.Exists(strconv.FormatInt(req.From, 10), strconv.FormatInt(req.To, 10), req.Channel)
+	//	//if err != nil {
+	//	//	return nil, err
+	//	//}
+	//	//if exists {
+	//	//	return nil, errors.Internal("export already in progress")
+	//	//}
+	//	//
+	//	//err = m.app.cache.SetRequest(strconv.FormatInt(req.From, 10), strconv.FormatInt(req.To, 10), req.Channel, 30*time.Minute)
+	//	//if err != nil {
+	//	//	return nil, err
+	//	//}
 
-	var info metadata.MD
-
-	info, ok = metadata.FromIncomingContext(ctx)
+	info, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return nil, errors.Forbidden("internal.grpc.get_context: Not found")
 	}
 	newCtx := metadata.NewOutgoingContext(ctx, info)
+	sess := GetAutherOutOfContext(ctx)
 
-	// 2. Fetch files from Storage API
-	//TODO add uploaded range filter
+	//Fetch files from Storage API
 	resp, err := m.app.storageClient.SearchScreenRecordings(newCtx, &storage.SearchScreenRecordingsRequest{
 		Channel: enumChannel,
 		UserId:  req.AgentId,
@@ -76,47 +73,51 @@ func (m *MediaExporterService) ExportPDF(
 		return nil, err
 	}
 
-	sess := GetAutherOutOfContext(ctx)
-
+	//download to temp
 	tmpFiles := make(map[string]string)
-	for _, f := range resp.Items {
-		tmpPath, err := m.downloadToTemp(ctx, sess.GetDomainId(), f)
-		if err != nil {
-			return nil, err
-		}
-		tmpFiles[strconv.FormatInt(f.Id, 10)] = tmpPath
-	}
-
-	// 3. Generate PDF as bytes
 	fileInfos := make(map[string]*storage.File)
+	var mu sync.Mutex
+	g := new(errgroup.Group)
+
 	for _, f := range resp.Items {
-		tmpPath, err := m.downloadToTemp(ctx, sess.GetDomainId(), f)
-		if err != nil {
-			return nil, err
-		}
-		tmpFiles[strconv.FormatInt(f.Id, 10)] = tmpPath
-		fileInfos[strconv.FormatInt(f.Id, 10)] = f
+		f := f
+		g.Go(func() error {
+			tmpPath, err := m.downloadToTemp(ctx, sess.GetDomainId(), f)
+			if err != nil {
+				return err
+			}
+			mu.Lock()
+			tmpFiles[strconv.FormatInt(f.Id, 10)] = tmpPath
+			fileInfos[strconv.FormatInt(f.Id, 10)] = f
+			mu.Unlock()
+			return nil
+		})
 	}
 
-	pdfBytes, err := m.generatePDFBytes(tmpFiles, fileInfos)
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	//Generate PDF as bytes
+	output, err := m.generatePDFBytes(tmpFiles, fileInfos)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := savePDFToFile(pdfBytes, "output.pdf"); err != nil {
-		return nil, err
-	}
+	////Save PDF to file (optional)
+	//if err := savePDFToFile(output, "output.pdf"); err != nil {
+	//	return nil, err
+	//}
 
-	// 4. Cleanup
+	//Cleanup
 	for _, path := range tmpFiles {
 		_ = os.Remove(path)
 	}
 	_ = m.app.cache.Delete(strconv.FormatInt(req.From, 10), strconv.FormatInt(req.To, 10), req.Channel)
 
-	// 5. Return response as chunk
 	return &mediaexporter.ExportResponse{
 		Data: &mediaexporter.ExportResponse_Chunk{
-			Chunk: pdfBytes,
+			Chunk: output,
 		},
 	}, nil
 }
@@ -124,7 +125,7 @@ func (m *MediaExporterService) ExportPDF(
 func (m *MediaExporterService) downloadToTemp(ctx context.Context, domainID int64, f *storage.File) (string, error) {
 	tmpDir := os.TempDir()
 
-	ext := ".jpg" // дефолт
+	ext := ".jpg"
 	if f.MimeType != "" {
 		switch f.MimeType {
 		case "image/png":
@@ -138,15 +139,15 @@ func (m *MediaExporterService) downloadToTemp(ctx context.Context, domainID int6
 
 	tmpPath := filepath.Join(tmpDir, fmt.Sprintf("%d_%s%s", f.Id, f.Name, ext))
 
+	if f.Id == 0 || f.Name == "" {
+		return "", fmt.Errorf("invalid file: id=%d, name='%s'", f.Id, f.Name)
+	}
+
 	out, err := os.Create(tmpPath)
 	if err != nil {
 		return "", err
 	}
 	defer out.Close()
-
-	if f.Id == 0 || f.Name == "" {
-		return "", fmt.Errorf("invalid file: id=%d, name='%s'", f.Id, f.Name)
-	}
 
 	stream, err := m.app.storageClient.DownloadFile(ctx, &storage.DownloadFileRequest{
 		Id:       f.Id,
@@ -168,6 +169,16 @@ func (m *MediaExporterService) downloadToTemp(ctx context.Context, domainID int6
 		if err != nil {
 			return "", err
 		}
+	}
+
+	img, err := imaging.Open(tmpPath)
+	if err != nil {
+		return tmpPath, nil
+	}
+
+	resized := imaging.Resize(img, 400, 0, imaging.Lanczos)
+	if err := imaging.Save(resized, tmpPath); err != nil {
+		return tmpPath, nil
 	}
 
 	return tmpPath, nil
@@ -195,7 +206,7 @@ func (m *MediaExporterService) generatePDFBytes(files map[string]string, fileInf
 		timestamp := "unknown"
 		if file.UploadedAt > 0 {
 			t := time.Unix(file.UploadedAt/1000, (file.UploadedAt%1000)*1e6)
-			timestamp = t.Format("15:04 02.01.2006") // формат 15:04 22.09.2025
+			timestamp = t.Format("15:04 02.01.2006")
 		}
 
 		tmpFiles = append(tmpFiles, tmpFile{

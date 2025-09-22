@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	buf.build/gen/go/webitel/webitel-go/grpc/go v1.5.1-20250916150832-6d5fea27a7f5.2
 	buf.build/gen/go/webitel/webitel-go/protocolbuffers/go v1.36.9-20250916150832-6d5fea27a7f5.1
+	github.com/disintegration/imaging v1.6.2
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2
 	github.com/hashicorp/consul/api v1.32.3
 	github.com/johnfercher/maroto v1.0.0
@@ -30,6 +31,7 @@ require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.34.2-20240920164238-5a7b106cbb87.2 // indirect
 	github.com/go-playground/form v3.1.4+incompatible // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
+	golang.org/x/image v0.12.0 // indirect
 )
 
 require (
