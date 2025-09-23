@@ -8,6 +8,8 @@ import (
 	"github.com/webitel/media-exporter/auth"
 	"github.com/webitel/media-exporter/auth/manager/webitel_app"
 	"github.com/webitel/media-exporter/internal/server"
+	"github.com/webitel/media-exporter/internal/store"
+	"github.com/webitel/media-exporter/internal/store/postgres"
 
 	"github.com/webitel/media-exporter/api/storage"
 	cfg "github.com/webitel/media-exporter/config"
@@ -19,6 +21,7 @@ import (
 
 type App struct {
 	config         *cfg.AppConfig
+	Store          store.Store
 	server         *server.Server
 	exitCh         chan error
 	sessionManager auth.Manager
@@ -34,6 +37,12 @@ func New(config *cfg.AppConfig, shutdown func(ctx context.Context) error) (*App,
 	// --------- App Initialization ---------
 	app := &App{config: config, shutdown: shutdown}
 	var err error
+
+	// --------- DB Initialization ---------
+	if config.Database == nil {
+		return nil, errors.New("error creating store, config is nil")
+	}
+	app.Store = BuildDatabase(config.Database)
 
 	// --------- Storage gRPC Connection ---------
 	app.storageConn, err = grpc.NewClient(fmt.Sprintf("consul://%s/storage?wait=14s", config.Consul.Address),
@@ -86,8 +95,15 @@ func New(config *cfg.AppConfig, shutdown func(ctx context.Context) error) (*App,
 	return app, nil
 }
 
-func (a *App) Start() error { // Change return type to standard error
+func BuildDatabase(config *cfg.DatabaseConfig) store.Store {
+	return postgres.New(config)
+}
 
+func (a *App) Start() error { // Change return type to standard error
+	err := a.Store.Open()
+	if err != nil {
+		return errors.New("failed to open store", errors.WithCause(err))
+	}
 	// * run grpc server
 	go a.server.Start()
 	return <-a.exitCh

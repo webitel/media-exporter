@@ -11,9 +11,10 @@ import (
 )
 
 type AppConfig struct {
-	File   string        `json:"-"`
-	Consul *ConsulConfig `json:"consul,omitempty"`
-	Redis  *RedisConfig  `json:"redis,omitempty"`
+	File     string          `json:"-"`
+	Consul   *ConsulConfig   `json:"consul,omitempty"`
+	Redis    *RedisConfig    `json:"redis,omitempty"`
+	Database *DatabaseConfig `json:"database,omitempty"`
 }
 
 type ConsulConfig struct {
@@ -26,6 +27,10 @@ type RedisConfig struct {
 	Addr     string `json:"addr"`
 	Password string `json:"password"`
 	DB       int    `json:"db"`
+}
+
+type DatabaseConfig struct {
+	Url string `json:"url"`
 }
 
 func LoadConfig() (*AppConfig, error) {
@@ -48,6 +53,9 @@ func LoadConfig() (*AppConfig, error) {
 
 func bindFlagsAndEnv() {
 	pflag.String("config_file", "", "Configuration file in JSON format")
+
+	// database
+	pflag.String("data_source", "", "Data source")
 
 	// consul
 	pflag.String("id", "", "Service id")
@@ -93,7 +101,8 @@ func loadFromFile(path string) error {
 
 func buildAppConfig(file string) *AppConfig {
 	return &AppConfig{
-		File: file,
+		File:     file,
+		Database: &DatabaseConfig{Url: viper.GetString("data_source")},
 		Consul: &ConsulConfig{
 			Id:            viper.GetString("id"),
 			Address:       viper.GetString("consul"),
@@ -108,6 +117,9 @@ func buildAppConfig(file string) *AppConfig {
 }
 
 func validateConfig(cfg *AppConfig) error {
+	if cfg.Database.Url == "" {
+		return errors.New("Data source is required")
+	}
 	if cfg.Consul.Id == "" {
 		return errors.New("Service id is required")
 	}
