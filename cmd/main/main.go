@@ -67,6 +67,7 @@ func Run() {
 	} else {
 		slog.Info("media_exporter.main.application_started_successfully")
 	}
+
 }
 
 func initSignals(application *app.App) {

@@ -19,21 +19,20 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	MediaExporterService_ExportPDF_FullMethodName = "/webitel.mediaexporter.MediaExporterService/ExportPDF"
-	MediaExporterService_ExportZIP_FullMethodName = "/webitel.mediaexporter.MediaExporterService/ExportZIP"
+	MediaExporterService_GeneratePDF_FullMethodName = "/webitel.mediaexporter.MediaExporterService/GeneratePDF"
+	MediaExporterService_DownloadPDF_FullMethodName = "/webitel.mediaexporter.MediaExporterService/DownloadPDF"
 )
 
 // MediaExporterServiceClient is the client API for MediaExporterService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// MediaExporterService is responsible for generating exports (PDF, ZIP)
-// from media files (screenshots, recordings, etc.) stored in the system.
+// Service for generating exports from media files
 type MediaExporterServiceClient interface {
-	// Export PDF by channel and date range
-	ExportPDF(ctx context.Context, in *ExportRequest, opts ...grpc.CallOption) (*ExportResponse, error)
-	// Export ZIP by channel and date range
-	ExportZIP(ctx context.Context, in *ExportRequest, opts ...grpc.CallOption) (*ExportResponse, error)
+	// Generate PDF asynchronously, returns metadata
+	GeneratePDF(ctx context.Context, in *ExportRequest, opts ...grpc.CallOption) (*ExportMetadata, error)
+	// Download previously generated PDF
+	DownloadPDF(ctx context.Context, in *DownloadRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ExportResponse], error)
 }
 
 type mediaExporterServiceClient struct {
@@ -44,37 +43,45 @@ func NewMediaExporterServiceClient(cc grpc.ClientConnInterface) MediaExporterSer
 	return &mediaExporterServiceClient{cc}
 }
 
-func (c *mediaExporterServiceClient) ExportPDF(ctx context.Context, in *ExportRequest, opts ...grpc.CallOption) (*ExportResponse, error) {
+func (c *mediaExporterServiceClient) GeneratePDF(ctx context.Context, in *ExportRequest, opts ...grpc.CallOption) (*ExportMetadata, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ExportResponse)
-	err := c.cc.Invoke(ctx, MediaExporterService_ExportPDF_FullMethodName, in, out, cOpts...)
+	out := new(ExportMetadata)
+	err := c.cc.Invoke(ctx, MediaExporterService_GeneratePDF_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *mediaExporterServiceClient) ExportZIP(ctx context.Context, in *ExportRequest, opts ...grpc.CallOption) (*ExportResponse, error) {
+func (c *mediaExporterServiceClient) DownloadPDF(ctx context.Context, in *DownloadRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ExportResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ExportResponse)
-	err := c.cc.Invoke(ctx, MediaExporterService_ExportZIP_FullMethodName, in, out, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &MediaExporterService_ServiceDesc.Streams[0], MediaExporterService_DownloadPDF_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &grpc.GenericClientStream[DownloadRequest, ExportResponse]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
 }
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MediaExporterService_DownloadPDFClient = grpc.ServerStreamingClient[ExportResponse]
 
 // MediaExporterServiceServer is the server API for MediaExporterService service.
 // All implementations must embed UnimplementedMediaExporterServiceServer
 // for forward compatibility.
 //
-// MediaExporterService is responsible for generating exports (PDF, ZIP)
-// from media files (screenshots, recordings, etc.) stored in the system.
+// Service for generating exports from media files
 type MediaExporterServiceServer interface {
-	// Export PDF by channel and date range
-	ExportPDF(context.Context, *ExportRequest) (*ExportResponse, error)
-	// Export ZIP by channel and date range
-	ExportZIP(context.Context, *ExportRequest) (*ExportResponse, error)
+	// Generate PDF asynchronously, returns metadata
+	GeneratePDF(context.Context, *ExportRequest) (*ExportMetadata, error)
+	// Download previously generated PDF
+	DownloadPDF(*DownloadRequest, grpc.ServerStreamingServer[ExportResponse]) error
 	mustEmbedUnimplementedMediaExporterServiceServer()
 }
 
@@ -85,11 +92,11 @@ type MediaExporterServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedMediaExporterServiceServer struct{}
 
-func (UnimplementedMediaExporterServiceServer) ExportPDF(context.Context, *ExportRequest) (*ExportResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ExportPDF not implemented")
+func (UnimplementedMediaExporterServiceServer) GeneratePDF(context.Context, *ExportRequest) (*ExportMetadata, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GeneratePDF not implemented")
 }
-func (UnimplementedMediaExporterServiceServer) ExportZIP(context.Context, *ExportRequest) (*ExportResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ExportZIP not implemented")
+func (UnimplementedMediaExporterServiceServer) DownloadPDF(*DownloadRequest, grpc.ServerStreamingServer[ExportResponse]) error {
+	return status.Errorf(codes.Unimplemented, "method DownloadPDF not implemented")
 }
 func (UnimplementedMediaExporterServiceServer) mustEmbedUnimplementedMediaExporterServiceServer() {}
 func (UnimplementedMediaExporterServiceServer) testEmbeddedByValue()                              {}
@@ -112,41 +119,34 @@ func RegisterMediaExporterServiceServer(s grpc.ServiceRegistrar, srv MediaExport
 	s.RegisterService(&MediaExporterService_ServiceDesc, srv)
 }
 
-func _MediaExporterService_ExportPDF_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _MediaExporterService_GeneratePDF_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ExportRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MediaExporterServiceServer).ExportPDF(ctx, in)
+		return srv.(MediaExporterServiceServer).GeneratePDF(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: MediaExporterService_ExportPDF_FullMethodName,
+		FullMethod: MediaExporterService_GeneratePDF_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MediaExporterServiceServer).ExportPDF(ctx, req.(*ExportRequest))
+		return srv.(MediaExporterServiceServer).GeneratePDF(ctx, req.(*ExportRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _MediaExporterService_ExportZIP_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ExportRequest)
-	if err := dec(in); err != nil {
-		return nil, err
+func _MediaExporterService_DownloadPDF_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(DownloadRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(MediaExporterServiceServer).ExportZIP(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: MediaExporterService_ExportZIP_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MediaExporterServiceServer).ExportZIP(ctx, req.(*ExportRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(MediaExporterServiceServer).DownloadPDF(m, &grpc.GenericServerStream[DownloadRequest, ExportResponse]{ServerStream: stream})
 }
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MediaExporterService_DownloadPDFServer = grpc.ServerStreamingServer[ExportResponse]
 
 // MediaExporterService_ServiceDesc is the grpc.ServiceDesc for MediaExporterService service.
 // It's only intended for direct use with grpc.RegisterService,
@@ -156,14 +156,16 @@ var MediaExporterService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*MediaExporterServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "ExportPDF",
-			Handler:    _MediaExporterService_ExportPDF_Handler,
-		},
-		{
-			MethodName: "ExportZIP",
-			Handler:    _MediaExporterService_ExportZIP_Handler,
+			MethodName: "GeneratePDF",
+			Handler:    _MediaExporterService_GeneratePDF_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "DownloadPDF",
+			Handler:       _MediaExporterService_DownloadPDF_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "media_exporter.proto",
 }

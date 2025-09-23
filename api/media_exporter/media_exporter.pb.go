@@ -22,10 +22,10 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// ExportRequest defines the input parameters for generating an export.
+// Request to generate export
 type ExportRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	AgentId       int64                  `protobuf:"varint,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"` // ID of the agent whose media is to be exported.
+	AgentId       int64                  `protobuf:"varint,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"` // Agent ID
 	Channel       string                 `protobuf:"bytes,2,opt,name=channel,proto3" json:"channel,omitempty"`
 	From          int64                  `protobuf:"varint,3,opt,name=from,proto3" json:"from,omitempty"`
 	To            int64                  `protobuf:"varint,4,opt,name=to,proto3" json:"to,omitempty"`
@@ -91,21 +91,139 @@ func (x *ExportRequest) GetTo() int64 {
 	return 0
 }
 
-// ExportResponse returns the generated file as a stream.
+// Request to download export
+type DownloadRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"` // Task identifier from GeneratePDF
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DownloadRequest) Reset() {
+	*x = DownloadRequest{}
+	mi := &file_media_exporter_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DownloadRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DownloadRequest) ProtoMessage() {}
+
+func (x *DownloadRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_media_exporter_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DownloadRequest.ProtoReflect.Descriptor instead.
+func (*DownloadRequest) Descriptor() ([]byte, []int) {
+	return file_media_exporter_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *DownloadRequest) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+// Metadata about export
+type ExportMetadata struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	FileName      string                 `protobuf:"bytes,2,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
+	MimeType      string                 `protobuf:"bytes,3,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"` // e.g., "application/pdf"
+	Status        string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`                     // pending | processing | done | failed
+	Size          int64                  `protobuf:"varint,5,opt,name=size,proto3" json:"size,omitempty"`                        // optional, 0 if not ready
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExportMetadata) Reset() {
+	*x = ExportMetadata{}
+	mi := &file_media_exporter_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExportMetadata) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExportMetadata) ProtoMessage() {}
+
+func (x *ExportMetadata) ProtoReflect() protoreflect.Message {
+	mi := &file_media_exporter_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExportMetadata.ProtoReflect.Descriptor instead.
+func (*ExportMetadata) Descriptor() ([]byte, []int) {
+	return file_media_exporter_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ExportMetadata) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+func (x *ExportMetadata) GetFileName() string {
+	if x != nil {
+		return x.FileName
+	}
+	return ""
+}
+
+func (x *ExportMetadata) GetMimeType() string {
+	if x != nil {
+		return x.MimeType
+	}
+	return ""
+}
+
+func (x *ExportMetadata) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ExportMetadata) GetSize() int64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+// Response with PDF chunk
 type ExportResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Types that are valid to be assigned to Data:
-	//
-	//	*ExportResponse_Metadata
-	//	*ExportResponse_Chunk
-	Data          isExportResponse_Data `protobuf_oneof:"data"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Chunk         []byte                 `protobuf:"bytes,1,opt,name=chunk,proto3" json:"chunk,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ExportResponse) Reset() {
 	*x = ExportResponse{}
-	mi := &file_media_exporter_proto_msgTypes[1]
+	mi := &file_media_exporter_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -117,7 +235,7 @@ func (x *ExportResponse) String() string {
 func (*ExportResponse) ProtoMessage() {}
 
 func (x *ExportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_media_exporter_proto_msgTypes[1]
+	mi := &file_media_exporter_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -130,109 +248,14 @@ func (x *ExportResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportResponse.ProtoReflect.Descriptor instead.
 func (*ExportResponse) Descriptor() ([]byte, []int) {
-	return file_media_exporter_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *ExportResponse) GetData() isExportResponse_Data {
-	if x != nil {
-		return x.Data
-	}
-	return nil
-}
-
-func (x *ExportResponse) GetMetadata() *Metadata {
-	if x != nil {
-		if x, ok := x.Data.(*ExportResponse_Metadata); ok {
-			return x.Metadata
-		}
-	}
-	return nil
+	return file_media_exporter_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ExportResponse) GetChunk() []byte {
 	if x != nil {
-		if x, ok := x.Data.(*ExportResponse_Chunk); ok {
-			return x.Chunk
-		}
+		return x.Chunk
 	}
 	return nil
-}
-
-type isExportResponse_Data interface {
-	isExportResponse_Data()
-}
-
-type ExportResponse_Metadata struct {
-	Metadata *Metadata `protobuf:"bytes,1,opt,name=metadata,proto3,oneof"`
-}
-
-type ExportResponse_Chunk struct {
-	Chunk []byte `protobuf:"bytes,2,opt,name=chunk,proto3,oneof"`
-}
-
-func (*ExportResponse_Metadata) isExportResponse_Data() {}
-
-func (*ExportResponse_Chunk) isExportResponse_Data() {}
-
-// Metadata about the generated export file.
-type Metadata struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	FileName      string                 `protobuf:"bytes,1,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"` // e.g., "export_2025-01-01_2025-01-31.pdf"
-	MimeType      string                 `protobuf:"bytes,2,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"` // e.g., "application/pdf" or "application/zip"
-	Size          int64                  `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"`                        // file size in bytes (optional)
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Metadata) Reset() {
-	*x = Metadata{}
-	mi := &file_media_exporter_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Metadata) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Metadata) ProtoMessage() {}
-
-func (x *Metadata) ProtoReflect() protoreflect.Message {
-	mi := &file_media_exporter_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Metadata.ProtoReflect.Descriptor instead.
-func (*Metadata) Descriptor() ([]byte, []int) {
-	return file_media_exporter_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *Metadata) GetFileName() string {
-	if x != nil {
-		return x.FileName
-	}
-	return ""
-}
-
-func (x *Metadata) GetMimeType() string {
-	if x != nil {
-		return x.MimeType
-	}
-	return ""
-}
-
-func (x *Metadata) GetSize() int64 {
-	if x != nil {
-		return x.Size
-	}
-	return 0
 }
 
 var File_media_exporter_proto protoreflect.FileDescriptor
@@ -244,18 +267,20 @@ const file_media_exporter_proto_rawDesc = "" +
 	"\bagent_id\x18\x01 \x01(\x03R\aagentId\x12\x18\n" +
 	"\achannel\x18\x02 \x01(\tR\achannel\x12\x12\n" +
 	"\x04from\x18\x03 \x01(\x03R\x04from\x12\x0e\n" +
-	"\x02to\x18\x04 \x01(\x03R\x02to\"o\n" +
-	"\x0eExportResponse\x12=\n" +
-	"\bmetadata\x18\x01 \x01(\v2\x1f.webitel.mediaexporter.MetadataH\x00R\bmetadata\x12\x16\n" +
-	"\x05chunk\x18\x02 \x01(\fH\x00R\x05chunkB\x06\n" +
-	"\x04data\"X\n" +
-	"\bMetadata\x12\x1b\n" +
-	"\tfile_name\x18\x01 \x01(\tR\bfileName\x12\x1b\n" +
-	"\tmime_type\x18\x02 \x01(\tR\bmimeType\x12\x12\n" +
-	"\x04size\x18\x03 \x01(\x03R\x04size2\x96\x02\n" +
-	"\x14MediaExporterService\x12~\n" +
-	"\tExportPDF\x12$.webitel.mediaexporter.ExportRequest\x1a%.webitel.mediaexporter.ExportResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/export/media/{agent_id}/pdf\x12~\n" +
-	"\tExportZIP\x12$.webitel.mediaexporter.ExportRequest\x1a%.webitel.mediaexporter.ExportResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/export/media/{agent_id}/zipB\xe9\x01\n" +
+	"\x02to\x18\x04 \x01(\x03R\x02to\"*\n" +
+	"\x0fDownloadRequest\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\"\x8f\x01\n" +
+	"\x0eExportMetadata\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x1b\n" +
+	"\tfile_name\x18\x02 \x01(\tR\bfileName\x12\x1b\n" +
+	"\tmime_type\x18\x03 \x01(\tR\bmimeType\x12\x16\n" +
+	"\x06status\x18\x04 \x01(\tR\x06status\x12\x12\n" +
+	"\x04size\x18\x05 \x01(\x03R\x04size\"&\n" +
+	"\x0eExportResponse\x12\x14\n" +
+	"\x05chunk\x18\x01 \x01(\fR\x05chunk2\xa2\x02\n" +
+	"\x14MediaExporterService\x12\x83\x01\n" +
+	"\vGeneratePDF\x12$.webitel.mediaexporter.ExportRequest\x1a%.webitel.mediaexporter.ExportMetadata\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/export/media/{agent_id}/pdf\x12\x83\x01\n" +
+	"\vDownloadPDF\x12&.webitel.mediaexporter.DownloadRequest\x1a%.webitel.mediaexporter.ExportResponse\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/export/media/{task_id}/pdf0\x01B\xe9\x01\n" +
 	"\x19com.webitel.mediaexporterB\x12MediaExporterProtoP\x01ZCgithub.com/webitel/media-exporter/api/media_exporter;media_exporter\xa2\x02\x03WMX\xaa\x02\x15Webitel.Mediaexporter\xca\x02\x15Webitel\\Mediaexporter\xe2\x02!Webitel\\Mediaexporter\\GPBMetadata\xea\x02\x16Webitel::Mediaexporterb\x06proto3"
 
 var (
@@ -270,23 +295,23 @@ func file_media_exporter_proto_rawDescGZIP() []byte {
 	return file_media_exporter_proto_rawDescData
 }
 
-var file_media_exporter_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_media_exporter_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_media_exporter_proto_goTypes = []any{
-	(*ExportRequest)(nil),  // 0: webitel.mediaexporter.ExportRequest
-	(*ExportResponse)(nil), // 1: webitel.mediaexporter.ExportResponse
-	(*Metadata)(nil),       // 2: webitel.mediaexporter.Metadata
+	(*ExportRequest)(nil),   // 0: webitel.mediaexporter.ExportRequest
+	(*DownloadRequest)(nil), // 1: webitel.mediaexporter.DownloadRequest
+	(*ExportMetadata)(nil),  // 2: webitel.mediaexporter.ExportMetadata
+	(*ExportResponse)(nil),  // 3: webitel.mediaexporter.ExportResponse
 }
 var file_media_exporter_proto_depIdxs = []int32{
-	2, // 0: webitel.mediaexporter.ExportResponse.metadata:type_name -> webitel.mediaexporter.Metadata
-	0, // 1: webitel.mediaexporter.MediaExporterService.ExportPDF:input_type -> webitel.mediaexporter.ExportRequest
-	0, // 2: webitel.mediaexporter.MediaExporterService.ExportZIP:input_type -> webitel.mediaexporter.ExportRequest
-	1, // 3: webitel.mediaexporter.MediaExporterService.ExportPDF:output_type -> webitel.mediaexporter.ExportResponse
-	1, // 4: webitel.mediaexporter.MediaExporterService.ExportZIP:output_type -> webitel.mediaexporter.ExportResponse
-	3, // [3:5] is the sub-list for method output_type
-	1, // [1:3] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	0, // 0: webitel.mediaexporter.MediaExporterService.GeneratePDF:input_type -> webitel.mediaexporter.ExportRequest
+	1, // 1: webitel.mediaexporter.MediaExporterService.DownloadPDF:input_type -> webitel.mediaexporter.DownloadRequest
+	2, // 2: webitel.mediaexporter.MediaExporterService.GeneratePDF:output_type -> webitel.mediaexporter.ExportMetadata
+	3, // 3: webitel.mediaexporter.MediaExporterService.DownloadPDF:output_type -> webitel.mediaexporter.ExportResponse
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
+	0, // [0:0] is the sub-list for extension type_name
+	0, // [0:0] is the sub-list for extension extendee
+	0, // [0:0] is the sub-list for field type_name
 }
 
 func init() { file_media_exporter_proto_init() }
@@ -294,17 +319,13 @@ func file_media_exporter_proto_init() {
 	if File_media_exporter_proto != nil {
 		return
 	}
-	file_media_exporter_proto_msgTypes[1].OneofWrappers = []any{
-		(*ExportResponse_Metadata)(nil),
-		(*ExportResponse_Chunk)(nil),
-	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_media_exporter_proto_rawDesc), len(file_media_exporter_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

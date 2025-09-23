@@ -32,24 +32,24 @@ var WebitelAPI = WebitelServicesInfo{
 		ObjClass:           "",
 		AdditionalLicenses: []string{},
 		WebitelMethods: map[string]WebitelMethod{
-			"ExportPDF": WebitelMethod{
+			"GeneratePDF": WebitelMethod{
 				Access: 0,
 				Input:  "ExportRequest",
-				Output: "ExportResponse",
+				Output: "ExportMetadata",
 				HttpBindings: []*HttpBinding{
 					{
 						Path:   "/export/media/{agent_id}/pdf",
-						Method: "GET",
+						Method: "POST",
 					},
 				},
 			},
-			"ExportZIP": WebitelMethod{
+			"DownloadPDF": WebitelMethod{
 				Access: 0,
-				Input:  "ExportRequest",
+				Input:  "DownloadRequest",
 				Output: "ExportResponse",
 				HttpBindings: []*HttpBinding{
 					{
-						Path:   "/export/media/{agent_id}/zip",
+						Path:   "/export/media/{task_id}/pdf",
 						Method: "GET",
 					},
 				},

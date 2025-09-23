@@ -2,15 +2,21 @@ package cache
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/webitel/media-exporter/internal/model"
 )
 
 type RedisCache struct {
 	client *redis.Client
 }
+
+const (
+	exportQueueKey = "export_queue"
+)
 
 func NewRedisCache(addr, password string, db int) (*RedisCache, error) {
 	rdb := redis.NewClient(&redis.Options{
@@ -22,7 +28,6 @@ func NewRedisCache(addr, password string, db int) (*RedisCache, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	// Ping Redis to check the connection
 	if err := rdb.Ping(ctx).Err(); err != nil {
 		return nil, fmt.Errorf("cannot connect to Redis at %s: %w", addr, err)
 	}
@@ -30,26 +35,54 @@ func NewRedisCache(addr, password string, db int) (*RedisCache, error) {
 	return &RedisCache{client: rdb}, nil
 }
 
-func (r *RedisCache) SetRequest(from, to, channel string, ttl time.Duration) error {
-	key := requestKey(from, to, channel)
-	return r.client.Set(context.Background(), key, "1", ttl).Err()
-}
-
-func (r *RedisCache) Exists(from, to, channel string) (bool, error) {
-	key := requestKey(from, to, channel)
-	count, err := r.client.Exists(context.Background(), key).Result()
+func (r *RedisCache) Exists(taskID string) (bool, error) {
+	count, err := r.client.Exists(context.Background(), taskID).Result()
 	if err != nil {
 		return false, err
 	}
 	return count > 0, nil
 }
 
-func (r *RedisCache) Delete(from, to, channel string) error {
-	key := requestKey(from, to, channel)
-	return r.client.Del(context.Background(), key).Err()
+func (r *RedisCache) PushExportTask(task model.ExportTask) error {
+	data, err := json.Marshal(task)
+	if err != nil {
+		return err
+	}
+	return r.client.RPush(context.Background(), exportQueueKey, data).Err()
 }
 
-// helper to standardize keys
-func requestKey(from, to, channel string) string {
-	return fmt.Sprintf("req:%s:%s:%s", from, to, channel)
+func (r *RedisCache) PopExportTask() (model.ExportTask, error) {
+	data, err := r.client.LPop(context.Background(), exportQueueKey).Bytes()
+	if err != nil {
+		if err == redis.Nil {
+			return model.ExportTask{}, fmt.Errorf("queue empty")
+		}
+		return model.ExportTask{}, err
+	}
+
+	var task model.ExportTask
+	if err := json.Unmarshal(data, &task); err != nil {
+		return model.ExportTask{}, err
+	}
+	return task, nil
+}
+
+func (r *RedisCache) SetExportStatus(taskID, status string) error {
+	key := fmt.Sprintf("export_status:%s", taskID)
+	return r.client.Set(context.Background(), key, status, 24*time.Hour).Err()
+}
+
+func (r *RedisCache) GetExportStatus(taskID string) (string, error) {
+	key := fmt.Sprintf("export_status:%s", taskID)
+	return r.client.Get(context.Background(), key).Result()
+}
+
+func (r *RedisCache) SetExportURL(taskID, url string) error {
+	key := fmt.Sprintf("export_url:%s", taskID)
+	return r.client.Set(context.Background(), key, url, 24*time.Hour).Err()
+}
+
+func (r *RedisCache) GetExportURL(taskID string) (string, error) {
+	key := fmt.Sprintf("export_url:%s", taskID)
+	return r.client.Get(context.Background(), key).Result()
 }
