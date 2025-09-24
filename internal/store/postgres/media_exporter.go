@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	dberr "github.com/webitel/media-exporter/internal/errors"
@@ -41,7 +42,6 @@ func (m *MediaExporter) InsertExportHistory(input *model.NewExportHistory) (int6
 		input.Status,
 	).Scan(&id)
 	if err != nil {
-		// розбір Postgres помилки
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			switch pgErr.Code {
@@ -72,19 +72,20 @@ func (m *MediaExporter) UpdateExportStatus(input *model.UpdateExportStatus) erro
 	}
 
 	query := `
-		UPDATE media_exporter.export_history
-		SET status = $1,
-		    updated_at = $2,
-		    updated_by = $3
-		WHERE id = $4
-	`
-
+    UPDATE media_exporter.export_history
+    SET status = $1,
+        updated_at = $2,
+        updated_by = $3,
+        file_id = COALESCE($4, file_id)
+    WHERE id = $5
+`
 	cmd, err := db.Exec(
 		context.Background(),
 		query,
 		input.Status,
 		time.Now().UnixMilli(),
 		input.UpdatedBy,
+		input.FileID,
 		input.ID,
 	)
 	if err != nil {
@@ -92,7 +93,8 @@ func (m *MediaExporter) UpdateExportStatus(input *model.UpdateExportStatus) erro
 	}
 
 	if cmd.RowsAffected() == 0 {
-		return dberr.NewDBNotFoundError("update_export_status", "no export history record found")
+		return dberr.NewDBNotFoundError("update_export_status",
+			fmt.Sprintf("no export history record found for id=%d", input.ID))
 	}
 
 	return nil

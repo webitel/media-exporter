@@ -8,10 +8,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	mediaexporter "github.com/webitel/media-exporter/api/media_exporter"
 	"github.com/webitel/media-exporter/api/storage"
 	"github.com/webitel/media-exporter/internal/errors"
 	"github.com/webitel/media-exporter/internal/model"
+	"github.com/webitel/media-exporter/internal/model/options"
+	"github.com/webitel/storage/gen/engine"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -26,55 +29,81 @@ func NewMediaExporterService(app *App) (*MediaExporterService, error) {
 	if app == nil {
 		return nil, errors.Internal("internal is nil")
 	}
-	fmt.Println("[MediaExporterService] Service created")
 	return &MediaExporterService{app: app}, nil
 }
 
 // GeneratePDF creates a new export task asynchronously and returns metadata.
-// It extracts serializable headers from the incoming context and stores them in the task.
+// It ensures the export history ID is set in cache before pushing the task to the queue.
 func (m *MediaExporterService) GeneratePDF(ctx context.Context, req *mediaexporter.ExportRequest) (*mediaexporter.ExportMetadata, error) {
 	taskID := fmt.Sprintf("%d:%d:%s", req.AgentId, req.To, req.Channel)
-	fmt.Printf("[GeneratePDF] Received request: TaskID=%s\n", taskID)
 
-	// Start workers once on a background context (worker lifecycle independent from request ctx)
-	m.onceWorkers.Do(func() {
-		fmt.Println("[GeneratePDF] Starting export workers...")
-		go StartExportWorkers(context.Background(), 4, m.app)
-	})
+	//if err := m.app.cache.Clear(); err != nil {
+	//	return nil, fmt.Errorf("failed to clear cache: %w", err)
+	//}
 
-	// Extract interesting headers from request context metadata and store them (serializable)
-	headers := extractHeadersFromContext(ctx, []string{"authorization", "x-request-id", "x-webitel-access"})
+	status, err := m.app.cache.GetExportStatus(taskID)
+	if err != nil && !errors.Is(err, redis.Nil) {
+		return nil, fmt.Errorf("failed to get task status: %w", err)
+	}
+	if status == "pending" || status == "processing" {
+		return nil, fmt.Errorf("task already in progress: %s", taskID)
+	}
 
-	// Check if task exists
 	exists, err := m.app.cache.Exists(taskID)
 	if err != nil {
-		fmt.Printf("[GeneratePDF] Cache check error: %v\n", err)
+		return nil, fmt.Errorf("failed to check task existence: %w", err)
+	}
+	if exists {
+		return nil, fmt.Errorf("task already in progress: %s", taskID)
+	}
+
+	opts, err := options.NewCreateOptions(ctx)
+	if err != nil {
 		return nil, err
 	}
 
-	if !exists {
-		task := model.ExportTask{
-			TaskID:  taskID,
-			UserID:  req.AgentId,
-			Channel: req.Channel,
-			From:    req.From,
-			To:      req.To,
-			Headers: headers,
-		}
-		fmt.Printf("[GeneratePDF] Pushing new task: %+v\n", task)
-		if err := m.app.cache.PushExportTask(task); err != nil {
-			return nil, err
-		}
-		if err := m.app.cache.SetExportStatus(taskID, "pending"); err != nil {
-			return nil, err
-		}
-	} else {
-		fmt.Printf("[GeneratePDF] Task already exists: %s\n", taskID)
+	headers := extractHeadersFromContext(ctx, []string{"authorization", "x-request-id", "x-webitel-access"})
+
+	history := &model.NewExportHistory{
+		Name:       fmt.Sprintf("%s.pdf", taskID),
+		FileID:     nil,
+		Mime:       "application/pdf",
+		UploadedAt: opts.Time.UnixMilli(),
+		UploadedBy: opts.Auth.GetUserId(),
+		Status:     "pending",
+	}
+	historyID, err := m.app.Store.MediaExporter().InsertExportHistory(history)
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert export history: %w", err)
 	}
 
-	// Return metadata immediately
+	if err := m.app.cache.SetExportHistoryID(taskID, historyID); err != nil {
+		return nil, fmt.Errorf("failed to set historyID in cache: %w", err)
+	}
+
+	task := model.ExportTask{
+		TaskID:  taskID,
+		UserID:  req.AgentId,
+		Channel: req.Channel,
+		From:    req.From,
+		To:      req.To,
+		Headers: headers,
+	}
+
+	if err := m.app.cache.PushExportTask(task); err != nil {
+		return nil, fmt.Errorf("failed to push task to queue: %w", err)
+	}
+	if err := m.app.cache.SetExportStatus(taskID, "pending"); err != nil {
+		return nil, fmt.Errorf("failed to set task status: %w", err)
+	}
+
+	m.onceWorkers.Do(func() {
+		go StartExportWorkers(context.Background(), opts, 4, m.app)
+	})
+
 	fileName := fmt.Sprintf("%s.pdf", taskID)
-	status, _ := m.app.cache.GetExportStatus(taskID)
+	status, _ = m.app.cache.GetExportStatus(taskID)
+
 	return &mediaexporter.ExportMetadata{
 		TaskId:   taskID,
 		FileName: fileName,
@@ -84,51 +113,30 @@ func (m *MediaExporterService) GeneratePDF(ctx context.Context, req *mediaexport
 	}, nil
 }
 
-// DownloadPDF streams generated PDF file by task_id
 func (m *MediaExporterService) DownloadPDF(req *mediaexporter.DownloadRequest, stream mediaexporter.MediaExporterService_DownloadPDFServer) error {
-	fmt.Printf("[DownloadPDF] Request for TaskID=%s\n", req.TaskId)
 
-	status, _ := m.app.cache.GetExportStatus(req.TaskId)
-	if status != "done" {
-		return fmt.Errorf("file not ready, current status: %s", status)
-	}
-	fileName, err := m.app.cache.GetExportURL(req.TaskId)
+	s, err := m.app.storageClient.DownloadFile(stream.Context(), &storage.DownloadFileRequest{
+		Id:       req.GetId(),
+		DomainId: req.GetDomainID(),
+	})
 	if err != nil {
-		return fmt.Errorf("cannot get file path: %v", err)
+		return fmt.Errorf("failed to init download stream: %w", err)
 	}
-
-	fmt.Printf("[DownloadPDF] Streaming file: %s\n", fileName)
-
-	file, err := os.Open(fileName)
-	if err != nil {
-		return fmt.Errorf("failed to open file: %w", err)
-	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			fmt.Printf("[DownloadPDF] Error closing file: %v\n", err)
-		}
-	}(file)
-
-	const chunkSize = 32 * 1024 // 32 KB
-	buf := make([]byte, chunkSize)
 
 	for {
-		n, readErr := file.Read(buf)
-		if n > 0 {
-			if err := stream.Send(&mediaexporter.ExportResponse{Chunk: buf[:n]}); err != nil {
-				return fmt.Errorf("failed to send chunk: %w", err)
-			}
-		}
-		if readErr != nil {
-			if readErr != io.EOF {
-				return fmt.Errorf("file read error: %w", readErr)
-			}
+		chunk, err := s.Recv()
+		if err == io.EOF {
 			break
+		}
+		if err != nil {
+			return fmt.Errorf("download stream error: %w", err)
+		}
+
+		if err := stream.Send(&mediaexporter.ExportResponse{Chunk: chunk.GetChunk()}); err != nil {
+			return fmt.Errorf("failed to send chunk: %w", err)
 		}
 	}
 
-	fmt.Printf("[DownloadPDF] Finished streaming TaskID=%s\n", req.TaskId)
 	return nil
 }
 
@@ -147,16 +155,13 @@ func extractHeadersFromContext(ctx context.Context, keys []string) map[string]st
 
 // StartExportWorkers runs background workers to process export queue.
 // workerCtx controls worker lifecycle (use a server-level context on shutdown).
-func StartExportWorkers(workerCtx context.Context, n int, app *App) {
-	fmt.Printf("[StartExportWorkers] Starting %d workers\n", n)
+func StartExportWorkers(workerCtx context.Context, opts *options.CreateOptions, n int, app *App) {
 	for i := 0; i < n; i++ {
 		go func(workerID int) {
-			fmt.Printf("[Worker-%d] Started\n", workerID)
 			for {
 				// Respect shutdown from workerCtx
 				select {
 				case <-workerCtx.Done():
-					fmt.Printf("[Worker-%d] Stopping (ctx.Done)\n", workerID)
 					return
 				default:
 				}
@@ -164,22 +169,17 @@ func StartExportWorkers(workerCtx context.Context, n int, app *App) {
 				// Pop tasks in the loop (pop should return meaningful error when empty)
 				task, err := app.cache.PopExportTask()
 				if err != nil {
-					// log error returned by PopExportTask, but do not quit the worker
-					fmt.Printf("[Worker-%d] PopExportTask error: %v\n", workerID, err)
 					time.Sleep(time.Second)
 					continue
 				}
-				fmt.Printf("[Worker-%d] Got task from queue: %+v\n", workerID, task)
 
 				_ = app.cache.SetExportStatus(task.TaskID, "processing")
 				// Rebuild a context for storage calls using headers saved in task
 				ctxWithHeaders := contextWithHeaders(task.Headers)
-				if err := processExportTask(ctxWithHeaders, app, task); err != nil {
+				if err := processExportTask(ctxWithHeaders, opts, app, task); err != nil {
 					_ = app.cache.SetExportStatus(task.TaskID, "failed")
-					fmt.Printf("[Worker-%d] Task failed: %s, err=%v\n", workerID, task.TaskID, err)
 				} else {
 					_ = app.cache.SetExportStatus(task.TaskID, "done")
-					fmt.Printf("[Worker-%d] Task done: %s\n", workerID, task.TaskID)
 				}
 			}
 		}(i)
@@ -201,65 +201,166 @@ func contextWithHeaders(headers map[string]string) context.Context {
 	return metadata.NewOutgoingContext(ctx, md)
 }
 
-// processExportTask generates PDF and saves it locally. It uses the ctx passed (which should
-// contain auth metadata via metadata.NewOutgoingContext).
-func processExportTask(ctx context.Context, app *App, task model.ExportTask) error {
-	fmt.Printf("[processExportTask] Start task=%s user=%d\n", task.TaskID, task.UserID)
+func processExportTask(ctx context.Context, opts *options.CreateOptions, app *App, task model.ExportTask) error {
+
+	historyID, err := app.cache.GetExportHistoryID(task.TaskID)
+	if err != nil {
+		_ = app.cache.ClearExportTask(task.TaskID)
+		return fmt.Errorf("historyID missing for task: %s", task.TaskID)
+	}
+
+	_ = app.cache.SetExportStatus(task.TaskID, "processing")
+	_ = app.Store.MediaExporter().UpdateExportStatus(&model.UpdateExportStatus{
+		ID:        historyID,
+		Status:    "processing",
+		UpdatedBy: opts.Auth.GetUserId(),
+		FileID:    nil,
+	})
 
 	enumChannel, err := parseChannel(task.Channel)
 	if err != nil {
+		_ = app.cache.ClearExportTask(task.TaskID)
 		return err
 	}
 
 	filesResp, err := app.storageClient.SearchScreenRecordings(ctx, &storage.SearchScreenRecordingsRequest{
 		Channel: enumChannel,
 		UserId:  task.UserID,
+		UploadedAt: &engine.FilterBetween{
+			From: task.From,
+			To:   task.To,
+		},
 	})
 	if err != nil {
-		return fmt.Errorf("SearchScreenRecordings failed: %w", err)
+		_ = app.Store.MediaExporter().UpdateExportStatus(&model.UpdateExportStatus{
+			ID:        historyID,
+			Status:    "failed",
+			UpdatedBy: opts.Auth.GetUserId(),
+			FileID:    nil,
+		})
+
+		_ = app.cache.ClearExportTask(task.TaskID)
+		return err
 	}
 
-	tmpFiles, fileInfos, err := downloadFilesWithPool(ctx, app, filesResp.Items)
+	tmpFiles, fileInfos, err := downloadFilesWithPool(ctx, opts, app, filesResp.Items)
 	if err != nil {
-		return fmt.Errorf("downloadFilesWithPool failed: %w", err)
+		_ = app.cache.ClearExportTask(task.TaskID)
+		return err
 	}
-	// remove only tmpFiles (images), not the generated PDF
 	defer cleanupFiles(tmpFiles)
-
-	fmt.Printf("[processExportTask] Downloaded %d files, starting PDF gen\n", len(tmpFiles))
 
 	pdfBytes, err := generatePDF(tmpFiles, fileInfos)
 	if err != nil {
-		fmt.Printf("[processExportTask] generatePDF failed: %v\n", err)
+		_ = app.cache.ClearExportTask(task.TaskID)
 		return err
 	}
-	fmt.Printf("[processExportTask] PDF generated in memory, size=%d bytes\n", len(pdfBytes))
 
 	fileName := fmt.Sprintf("%s.pdf", task.TaskID)
 	if err := savePDFToFile(pdfBytes, fileName); err != nil {
-		fmt.Printf("[processExportTask] savePDFToFile failed: %v\n", err)
+		_ = app.cache.ClearExportTask(task.TaskID)
 		return err
 	}
 
-	info, _ := os.Stat(fileName)
-	fileSize := int64(0)
-	if info != nil {
-		fileSize = info.Size()
-	}
-
-	fmt.Printf("[processExportTask] PDF generated successfully\n  TaskID: %s\n  UserID: %d\n  Channel: %s\n  From: %d, To: %d\n  File: %s (%d bytes)\n",
-		task.TaskID, task.UserID, task.Channel, task.From, task.To, fileName, fileSize)
-
-	if err := app.cache.SetExportURL(task.TaskID, fileName); err != nil {
-		fmt.Printf("[processExportTask] SetExportURL failed: %v\n", err)
+	res, err := uploadPDFToStorage(ctx, opts, app, fileName, task)
+	if err != nil {
+		_ = app.Store.MediaExporter().UpdateExportStatus(&model.UpdateExportStatus{
+			ID:        historyID,
+			Status:    "failed",
+			UpdatedBy: opts.Auth.GetUserId(),
+			FileID:    nil,
+		})
+		_ = app.cache.SetExportStatus(task.TaskID, "failed")
+		_ = app.cache.ClearExportTask(task.TaskID)
 		return err
 	}
+
+	historyUpdate := &model.UpdateExportStatus{
+		ID:        historyID,
+		FileID:    &res.FileId,
+		Status:    "done",
+		UpdatedBy: opts.Auth.GetUserId(),
+	}
+	_ = app.Store.MediaExporter().UpdateExportStatus(historyUpdate)
+
+	_ = app.cache.SetExportStatus(task.TaskID, "done")
+	_ = app.cache.SetExportURL(task.TaskID, fileName)
+	_ = app.cache.ClearExportTask(task.TaskID)
 
 	return nil
 }
 
+func uploadPDFToStorage(ctx context.Context, opts *options.CreateOptions, app *App, filePath string, task model.ExportTask) (*storage.UploadFileResponse, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("open file failed: %w", err)
+	}
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			fmt.Printf("[uploadPDFToStorage] Error closing file: %v\n", err)
+		}
+	}(f)
+
+	chEnum, err := parseChannel(task.Channel)
+	if err != nil {
+		return nil, err
+	}
+
+	stream, err := app.storageClient.UploadFile(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("UploadFile init failed: %w", err)
+	}
+
+	metadataMsg := &storage.UploadFileRequest{
+		Data: &storage.UploadFileRequest_Metadata_{
+			Metadata: &storage.UploadFileRequest_Metadata{
+				Name:           fmt.Sprintf("%s.pdf", task.TaskID),
+				MimeType:       "application/pdf",
+				Uuid:           task.TaskID,
+				StreamResponse: true,
+				Channel:        chEnum,
+				UploadedBy:     opts.Auth.GetUserId(),
+				DomainId:       opts.Auth.GetDomainId(),
+				CreatedAt:      time.Now().UnixMilli(),
+			},
+		},
+	}
+	if err := stream.Send(metadataMsg); err != nil {
+		return nil, fmt.Errorf("failed to send metadata: %w", err)
+	}
+
+	buf := make([]byte, 32*1024) // 32KB
+	for {
+		n, readErr := f.Read(buf)
+		if n > 0 {
+			chunkMsg := &storage.UploadFileRequest{
+				Data: &storage.UploadFileRequest_Chunk{
+					Chunk: buf[:n],
+				},
+			}
+			if err := stream.Send(chunkMsg); err != nil {
+				return nil, fmt.Errorf("failed to send chunk: %w", err)
+			}
+		}
+		if readErr == io.EOF {
+			break
+		}
+		if readErr != nil {
+			return nil, fmt.Errorf("read file failed: %w", readErr)
+		}
+	}
+
+	resp, err := stream.CloseAndRecv()
+	if err != nil {
+		return nil, fmt.Errorf("UploadFile close failed: %w", err)
+	}
+
+	return resp, nil
+}
+
 // downloadFilesWithPool downloads multiple files concurrently
-func downloadFilesWithPool(ctx context.Context, app *App, files []*storage.File) (map[string]string, map[string]*storage.File, error) {
+func downloadFilesWithPool(ctx context.Context, opts *options.CreateOptions, app *App, files []*storage.File) (map[string]string, map[string]*storage.File, error) {
 	tmpFiles := make(map[string]string)
 	fileInfos := make(map[string]*storage.File)
 	var mu sync.Mutex
@@ -272,7 +373,7 @@ func downloadFilesWithPool(ctx context.Context, app *App, files []*storage.File)
 	for w := 0; w < numWorkers; w++ {
 		go func() {
 			for j := range jobs {
-				tmpPath, err := downloadAndResize(ctx, app.storageClient, 1, j.file)
+				tmpPath, err := downloadAndResize(ctx, app.storageClient, opts.GetAuth().GetDomainId(), j.file)
 				if err == nil {
 					mu.Lock()
 					tmpFiles[fmt.Sprint(j.file.Id)] = tmpPath

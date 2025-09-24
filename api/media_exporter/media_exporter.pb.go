@@ -94,7 +94,8 @@ func (x *ExportRequest) GetTo() int64 {
 // Request to download export
 type DownloadRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"` // Task identifier from GeneratePDF
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`             // Task identifier from GeneratePDF
+	DomainID      int64                  `protobuf:"varint,2,opt,name=domainID,proto3" json:"domainID,omitempty"` // Domain ID for authorization
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -129,11 +130,18 @@ func (*DownloadRequest) Descriptor() ([]byte, []int) {
 	return file_media_exporter_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *DownloadRequest) GetTaskId() string {
+func (x *DownloadRequest) GetId() int64 {
 	if x != nil {
-		return x.TaskId
+		return x.Id
 	}
-	return ""
+	return 0
+}
+
+func (x *DownloadRequest) GetDomainID() int64 {
+	if x != nil {
+		return x.DomainID
+	}
+	return 0
 }
 
 // Metadata about export
@@ -267,9 +275,10 @@ const file_media_exporter_proto_rawDesc = "" +
 	"\bagent_id\x18\x01 \x01(\x03R\aagentId\x12\x18\n" +
 	"\achannel\x18\x02 \x01(\tR\achannel\x12\x12\n" +
 	"\x04from\x18\x03 \x01(\x03R\x04from\x12\x0e\n" +
-	"\x02to\x18\x04 \x01(\x03R\x02to\"*\n" +
-	"\x0fDownloadRequest\x12\x17\n" +
-	"\atask_id\x18\x01 \x01(\tR\x06taskId\"\x8f\x01\n" +
+	"\x02to\x18\x04 \x01(\x03R\x02to\"=\n" +
+	"\x0fDownloadRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1a\n" +
+	"\bdomainID\x18\x02 \x01(\x03R\bdomainID\"\x8f\x01\n" +
 	"\x0eExportMetadata\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x1b\n" +
 	"\tfile_name\x18\x02 \x01(\tR\bfileName\x12\x1b\n" +
@@ -277,10 +286,10 @@ const file_media_exporter_proto_rawDesc = "" +
 	"\x06status\x18\x04 \x01(\tR\x06status\x12\x12\n" +
 	"\x04size\x18\x05 \x01(\x03R\x04size\"&\n" +
 	"\x0eExportResponse\x12\x14\n" +
-	"\x05chunk\x18\x01 \x01(\fR\x05chunk2\xa2\x02\n" +
+	"\x05chunk\x18\x01 \x01(\fR\x05chunk2\x9c\x02\n" +
 	"\x14MediaExporterService\x12\x83\x01\n" +
-	"\vGeneratePDF\x12$.webitel.mediaexporter.ExportRequest\x1a%.webitel.mediaexporter.ExportMetadata\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/export/media/{agent_id}/pdf\x12\x83\x01\n" +
-	"\vDownloadPDF\x12&.webitel.mediaexporter.DownloadRequest\x1a%.webitel.mediaexporter.ExportResponse\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/export/media/{task_id}/pdf0\x01B\xe9\x01\n" +
+	"\vGeneratePDF\x12$.webitel.mediaexporter.ExportRequest\x1a%.webitel.mediaexporter.ExportMetadata\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/export/media/{agent_id}/pdf\x12~\n" +
+	"\vDownloadPDF\x12&.webitel.mediaexporter.DownloadRequest\x1a%.webitel.mediaexporter.ExportResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/export/media/{id}/pdf0\x01B\xe9\x01\n" +
 	"\x19com.webitel.mediaexporterB\x12MediaExporterProtoP\x01ZCgithub.com/webitel/media-exporter/api/media_exporter;media_exporter\xa2\x02\x03WMX\xaa\x02\x15Webitel.Mediaexporter\xca\x02\x15Webitel\\Mediaexporter\xe2\x02!Webitel\\Mediaexporter\\GPBMetadata\xea\x02\x16Webitel::Mediaexporterb\x06proto3"
 
 var (

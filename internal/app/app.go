@@ -109,7 +109,7 @@ func (a *App) Start() error { // Change return type to standard error
 	return <-a.exitCh
 }
 
-func (a *App) Stop() error { // Change return type to standard error
+func (a *App) Stop() error {
 	// close massive modules
 	a.server.Stop()
 	// close grpc connections
@@ -122,7 +122,7 @@ func (a *App) Stop() error { // Change return type to standard error
 		return err
 	}
 
-	// ----- Call the shutdown function for OTel ----- //
+	// ----- Call the shutdown function for OTEL ----- //
 	if a.shutdown != nil {
 		err := a.shutdown(context.Background())
 		if err != nil {
