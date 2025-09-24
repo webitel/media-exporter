@@ -49,7 +49,7 @@ var WebitelAPI = WebitelServicesInfo{
 				Output: "ExportResponse",
 				HttpBindings: []*HttpBinding{
 					{
-						Path:   "/export/media/{task_id}/pdf",
+						Path:   "/export/media/{id}/pdf",
 						Method: "GET",
 					},
 				},
