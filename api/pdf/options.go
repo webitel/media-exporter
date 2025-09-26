@@ -3,7 +3,7 @@
 // - protoc-gen-go-webitel v1.0.0
 // - protoc                (unknown)
 
-package media_exporter
+package pdf
 
 // WebitelServicesInfo is the list of services defined in proto files.
 type WebitelServicesInfo map[string]WebitelServices
@@ -28,28 +28,39 @@ type HttpBinding struct {
 }
 
 var WebitelAPI = WebitelServicesInfo{
-	"MediaExporterService": WebitelServices{
+	"PdfService": WebitelServices{
 		ObjClass:           "",
 		AdditionalLicenses: []string{},
 		WebitelMethods: map[string]WebitelMethod{
-			"GeneratePDF": WebitelMethod{
+			"GeneratePdfExport": WebitelMethod{
 				Access: 0,
-				Input:  "ExportRequest",
-				Output: "ExportMetadata",
+				Input:  "PdfGenerateRequest",
+				Output: "PdfExportMetadata",
 				HttpBindings: []*HttpBinding{
 					{
-						Path:   "/export/media/{agent_id}/pdf",
+						Path:   "/export/pdf/{agent_id}",
 						Method: "POST",
 					},
 				},
 			},
-			"DownloadPDF": WebitelMethod{
+			"DownloadPdfExport": WebitelMethod{
 				Access: 0,
-				Input:  "DownloadRequest",
-				Output: "ExportResponse",
+				Input:  "PdfDownloadRequest",
+				Output: "PdfExportChunk",
 				HttpBindings: []*HttpBinding{
 					{
-						Path:   "/export/media/{id}/pdf",
+						Path:   "/export/pdf/{id}",
+						Method: "GET",
+					},
+				},
+			},
+			"GetPdfExportHistory": WebitelMethod{
+				Access: 0,
+				Input:  "PdfHistoryRequest",
+				Output: "PdfHistoryResponse",
+				HttpBindings: []*HttpBinding{
+					{
+						Path:   "/export/pdf/{agent_id}/history",
 						Method: "GET",
 					},
 				},

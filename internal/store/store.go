@@ -1,16 +1,21 @@
 package store
 
-import "github.com/webitel/media-exporter/internal/model"
+import (
+	pdfapi "github.com/webitel/media-exporter/api/pdf"
+	"github.com/webitel/media-exporter/internal/model"
+	"github.com/webitel/media-exporter/internal/model/options"
+)
 
 type Store interface {
-	MediaExporter() MediaExporterStore
+	Pdf() PdfStore
 
 	// ------------ Database Management ------------ //
 	Open() error  // Return custom DB error
 	Close() error // Return custom DB error
 }
 
-type MediaExporterStore interface {
-	InsertExportHistory(input *model.NewExportHistory) (int64, error)
-	UpdateExportStatus(input *model.UpdateExportStatus) error
+type PdfStore interface {
+	InsertPdfExportHistory(input *model.NewExportHistory) (int64, error)
+	UpdatePdfExportStatus(input *model.UpdateExportStatus) error
+	GetPdfExportHistory(opts *options.SearchOptions, request *pdfapi.PdfHistoryRequest) (*pdfapi.PdfHistoryResponse, error)
 }

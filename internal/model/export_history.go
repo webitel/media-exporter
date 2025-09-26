@@ -6,6 +6,7 @@ const (
 	ExportStatusPending   ExportStatus = "pending"
 	ExportStatusCompleted ExportStatus = "completed"
 	ExportStatusFailed    ExportStatus = "failed"
+	ExportStatusDone      ExportStatus = "done"
 )
 
 type ExportHistory struct {
@@ -27,6 +28,7 @@ type NewExportHistory struct {
 	UploadedAt int64        `db:"uploaded_at"`
 	UploadedBy int64        `db:"uploaded_by"`
 	Status     ExportStatus `db:"status"`
+	AgentID    int64        `db:"agent_id"`
 }
 
 type UpdateExportStatus struct {

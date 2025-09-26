@@ -13,9 +13,9 @@ import (
 
 // Store is the struct implementing the Store interface.
 type Store struct {
-	mediaExporterStore store.MediaExporterStore
-	config             *conf.DatabaseConfig
-	conn               *pgxpool.Pool
+	pdfStore store.PdfStore
+	config   *conf.DatabaseConfig
+	conn     *pgxpool.Pool
 }
 
 // New creates a new Store instance.
@@ -23,15 +23,15 @@ func New(config *conf.DatabaseConfig) *Store {
 	return &Store{config: config}
 }
 
-func (s *Store) MediaExporter() store.MediaExporterStore {
-	if s.mediaExporterStore == nil {
-		cs, err := NewMediaExporterStore(s)
+func (s *Store) Pdf() store.PdfStore {
+	if s.pdfStore == nil {
+		cs, err := NewPdfStore(s)
 		if err != nil {
 			return nil
 		}
-		s.mediaExporterStore = cs
+		s.pdfStore = cs
 	}
-	return s.mediaExporterStore
+	return s.pdfStore
 }
 
 // Database returns the database connection or a custom error if it is not opened.
