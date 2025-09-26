@@ -3,7 +3,7 @@ package app
 import (
 	"log"
 
-	mediaexporter "github.com/webitel/media-exporter/api/media_exporter"
+	mediaexporter "github.com/webitel/media-exporter/api/pdf"
 	"google.golang.org/grpc"
 )
 
@@ -18,11 +18,11 @@ type serviceRegistration struct {
 func RegisterServices(grpcServer *grpc.Server, appInstance *App) {
 	services := []serviceRegistration{
 		{
-			init: func(a *App) (any, error) { return NewMediaExporterService(a) },
+			init: func(a *App) (any, error) { return NewPdfService(a) },
 			register: func(s *grpc.Server, svc any) {
-				mediaexporter.RegisterMediaExporterServiceServer(s, svc.(mediaexporter.MediaExporterServiceServer))
+				mediaexporter.RegisterPdfServiceServer(s, svc.(mediaexporter.PdfServiceServer))
 			},
-			name: "MediaExporter",
+			name: "Pdf",
 		},
 	}
 

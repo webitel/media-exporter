@@ -8,5 +8,6 @@ type ExportTask struct {
 	From    int64             `json:"from"`
 	To      int64             `json:"to"`
 	Headers map[string]string `json:"headers"` // serializable auth/metadata (e.g. "authorization")
+	IDs     []int64           `json:"ids"`     // list of specific IDs to export, if any
 	// NOTE: no context.Context field here — contexts are not serializable.
 }

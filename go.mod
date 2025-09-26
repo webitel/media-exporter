@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	buf.build/gen/go/webitel/webitel-go/grpc/go v1.5.1-20250916150832-6d5fea27a7f5.2
 	buf.build/gen/go/webitel/webitel-go/protocolbuffers/go v1.36.9-20250916150832-6d5fea27a7f5.1
+	github.com/Masterminds/squirrel v1.5.4
 	github.com/disintegration/imaging v1.6.2
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2
 	github.com/hashicorp/consul/api v1.32.3
@@ -32,7 +33,6 @@ require (
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.34.2-20240920164238-5a7b106cbb87.2 // indirect
 	github.com/go-playground/form v3.1.4+incompatible // indirect
-	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -40,15 +40,8 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
-	github.com/pborman/uuid v1.2.1 // indirect
-	github.com/robfig/cron v1.2.0 // indirect
-	github.com/webitel/engine/pkg/wbt v0.0.0-20250909063325-9c4271861b61 // indirect
-	github.com/webitel/engine/pkg/werror v0.0.0-20250508121332-6ae1563235d8 // indirect
-	github.com/webitel/wlog v0.0.0-20250325101442-de4f125c1ec7 // indirect
-	go.opentelemetry.io/contrib/bridges/otelzap v0.11.0 // indirect
-	go.uber.org/atomic v1.11.0 // indirect
-	go.uber.org/multierr v1.11.0 // indirect
-	go.uber.org/zap v1.27.0 // indirect
+	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
+	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
 	golang.org/x/image v0.12.0 // indirect
 )
