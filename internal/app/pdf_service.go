@@ -86,7 +86,6 @@ func (s *PdfService) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGener
 	}
 	fmt.Printf("[PdfService] history inserted (id=%d) and cached for task %s\n", historyID, taskID)
 
-	// створення таску
 	task := model.ExportTask{
 		TaskID:  taskID,
 		UserID:  req.AgentId,

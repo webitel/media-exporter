@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/webitel/media-exporter/api/storage"
 	"github.com/webitel/media-exporter/internal/model"
@@ -39,6 +40,7 @@ func handleTask(ctx context.Context, opts *options.CreateOptions, app *App, task
 		},
 	})
 	if err != nil {
+		slog.ErrorContext(ctx, "SearchScreenRecordings failed", "error", err)
 		_ = setTaskStatus(app, historyID, task.TaskID, "failed", opts.Auth.GetUserId(), nil)
 		return err
 	}
@@ -64,6 +66,7 @@ func handleTask(ctx context.Context, opts *options.CreateOptions, app *App, task
 
 	res, err := uploadPDFToStorage(ctx, opts, app, fileName, task)
 	if err != nil {
+		slog.ErrorContext(ctx, "uploadPDFToStorage failed", "error", err)
 		_ = setTaskStatus(app, historyID, task.TaskID, "failed", opts.Auth.GetUserId(), nil)
 		return err
 	}
