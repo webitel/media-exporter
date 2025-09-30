@@ -40,7 +40,6 @@ func (s *PdfService) GetPdfExportHistory(ctx context.Context, req *pdfapi.PdfHis
 
 func (s *PdfService) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGenerateRequest) (*pdfapi.PdfExportMetadata, error) {
 	taskID := fmt.Sprintf("%d:%d:%s", req.AgentId, req.To, req.Channel)
-	fmt.Printf("[PdfService] New GeneratePdfExport request: taskID=%s, files=%d\n", taskID, len(req.FileIds))
 
 	//if err := s.app.cache.Clear(); err != nil {
 	//	return nil, fmt.Errorf("failed to clear cache: %w", err)
@@ -48,18 +47,14 @@ func (s *PdfService) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGener
 
 	status, err := s.app.cache.GetExportStatus(taskID)
 	if err != nil && !errors.Is(err, redis.Nil) {
-		fmt.Printf("[PdfService] cache.GetExportStatus error: %v\n", err)
 		return nil, fmt.Errorf("failed to get task status: %w", err)
 	}
 	if status == "pending" || status == "processing" {
-		fmt.Printf("[PdfService] task %s already in progress (status=%s)\n", taskID, status)
 		return nil, fmt.Errorf("task already in progress: %s", taskID)
 	}
 	if exists, err := s.app.cache.Exists(taskID); err != nil {
-		fmt.Printf("[PdfService] cache.Exists error: %v\n", err)
 		return nil, fmt.Errorf("failed to check task existence: %w", err)
 	} else if exists {
-		fmt.Printf("[PdfService] task %s already exists in cache\n", taskID)
 		return nil, fmt.Errorf("task already in progress: %s", taskID)
 	}
 
@@ -77,14 +72,13 @@ func (s *PdfService) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGener
 	}
 	historyID, err := s.app.Store.Pdf().InsertPdfExportHistory(history)
 	if err != nil {
-		fmt.Printf("[PdfService] insert history failed: %v\n", err)
+
 		return nil, fmt.Errorf("insert history failed: %w", err)
 	}
 	if err := s.app.cache.SetExportHistoryID(taskID, historyID); err != nil {
-		fmt.Printf("[PdfService] cache set historyID failed: %v\n", err)
+
 		return nil, fmt.Errorf("cache set historyID failed: %w", err)
 	}
-	fmt.Printf("[PdfService] history inserted (id=%d) and cached for task %s\n", historyID, taskID)
 
 	task := model.ExportTask{
 		TaskID:  taskID,
@@ -97,16 +91,12 @@ func (s *PdfService) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGener
 	}
 
 	if err := s.app.cache.PushExportTask(task); err != nil {
-		fmt.Printf("[PdfService] PushExportTask failed: %v\n", err)
 		return nil, fmt.Errorf("push task failed: %w", err)
 	}
-	fmt.Printf("[PdfService] task pushed to queue: %s\n", taskID)
 
 	if err := s.app.cache.SetExportStatus(taskID, "pending"); err != nil {
-		fmt.Printf("[PdfService] SetExportStatus failed: %v\n", err)
 		return nil, fmt.Errorf("cache set status failed: %w", err)
 	}
-	fmt.Printf("[PdfService] task %s status set to pending\n", taskID)
 
 	s.onceWorkers.Do(func() {
 		fmt.Println("[PdfService] starting workers...")
