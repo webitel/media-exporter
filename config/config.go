@@ -15,6 +15,7 @@ type AppConfig struct {
 	Consul   *ConsulConfig   `json:"consul,omitempty"`
 	Redis    *RedisConfig    `json:"redis,omitempty"`
 	Database *DatabaseConfig `json:"database,omitempty"`
+	Export   *ExportConfig   `json:"export,omitempty"`
 }
 
 type ConsulConfig struct {
@@ -31,6 +32,10 @@ type RedisConfig struct {
 
 type DatabaseConfig struct {
 	Url string `json:"url"`
+}
+
+type ExportConfig struct {
+	Workers int `json:"workers"`
 }
 
 func LoadConfig() (*AppConfig, error) {
@@ -66,6 +71,8 @@ func bindFlagsAndEnv() {
 	pflag.String("redis_addr", "localhost:6379", "Redis address")
 	pflag.String("redis_password", "", "Redis password")
 	pflag.Int("redis_db", 0, "Redis DB number")
+	// export
+	pflag.Int("workers", 5, "Number of concurrent export workers")
 
 	pflag.Parse()
 
@@ -103,6 +110,7 @@ func buildAppConfig(file string) *AppConfig {
 	return &AppConfig{
 		File:     file,
 		Database: &DatabaseConfig{Url: viper.GetString("data_source")},
+		Export:   &ExportConfig{Workers: viper.GetInt("workers")},
 		Consul: &ConsulConfig{
 			Id:            viper.GetString("id"),
 			Address:       viper.GetString("consul"),

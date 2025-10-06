@@ -5,128 +5,161 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/webitel/media-exporter/api/storage"
 	"github.com/webitel/media-exporter/auth"
 	"github.com/webitel/media-exporter/auth/manager/webitel_app"
-	"github.com/webitel/media-exporter/internal/server"
-	"github.com/webitel/media-exporter/internal/store"
-	"github.com/webitel/media-exporter/internal/store/postgres"
-
-	"github.com/webitel/media-exporter/api/storage"
 	cfg "github.com/webitel/media-exporter/config"
 	cache "github.com/webitel/media-exporter/internal/cache/redis"
 	"github.com/webitel/media-exporter/internal/errors"
+	"github.com/webitel/media-exporter/internal/server"
+	"github.com/webitel/media-exporter/internal/store"
+	"github.com/webitel/media-exporter/internal/store/postgres"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 type App struct {
 	config         *cfg.AppConfig
-	Store          store.Store
-	server         *server.Server
-	exitCh         chan error
-	sessionManager auth.Manager
-	shutdown       func(ctx context.Context) error
 	log            *slog.Logger
+	exitCh         chan error
+	shutdown       func(ctx context.Context) error
+	Store          store.Store
+	sessionManager auth.Manager
 	cache          *cache.RedisCache
-	storageConn    *grpc.ClientConn
+	server         *server.Server
 	storageClient  storage.FileServiceClient
+
+	// gRPC connections
+	storageConn    *grpc.ClientConn
 	webitelAppConn *grpc.ClientConn
 }
 
+// New creates a fully initialized App.
 func New(config *cfg.AppConfig, shutdown func(ctx context.Context) error) (*App, error) {
-	// --------- App Initialization ---------
-	app := &App{config: config, shutdown: shutdown}
-	var err error
-
-	// --------- DB Initialization ---------
-	if config.Database == nil {
-		return nil, errors.New("error creating store, config is nil")
-	}
-	app.Store = BuildDatabase(config.Database)
-
-	// --------- Storage gRPC Connection ---------
-	app.storageConn, err = grpc.NewClient(fmt.Sprintf("consul://%s/storage?wait=14s", config.Consul.Address),
-		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy": "round_robin"}`),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-
-	app.storageClient = storage.NewFileServiceClient(app.storageConn)
-
-	if err != nil {
-		return nil, errors.New("unable to create storage client", errors.WithCause(err))
+	app := &App{
+		config:   config,
+		shutdown: shutdown,
+		exitCh:   make(chan error),
 	}
 
-	// --------- Webitel App gRPC Connection ---------
-	app.webitelAppConn, err = grpc.NewClient(fmt.Sprintf("consul://%s/go.webitel.app?wait=14s", config.Consul.Address),
-		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy": "round_robin"}`),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-
-	if err != nil {
-		return nil, errors.New("unable to create contact group client", errors.WithCause(err))
+	if err := app.initStore(); err != nil {
+		return nil, err
 	}
-
-	// --------- Session Manager Initialization ---------
-	app.sessionManager, err = webitel_app.New(app.webitelAppConn)
-	if err != nil {
+	if err := app.initRedis(); err != nil {
+		return nil, err
+	}
+	if err := app.initGRPCClients(); err != nil {
+		return nil, err
+	}
+	if err := app.initSessionManager(); err != nil {
+		return nil, err
+	}
+	if err := app.initServer(); err != nil {
 		return nil, err
 	}
 
-	// --------- Redis Initialization ---------
-	app.cache, err = cache.NewRedisCache(
-		config.Redis.Addr,
-		config.Redis.Password,
-		config.Redis.DB,
-	)
-	if err != nil {
-		return nil, errors.New("unable to initialize Redis cache", errors.WithCause(err))
-	}
-
-	// --------- gRPC Server Initialization ---------
-	s, err := server.BuildServer(app.config.Consul, app.sessionManager, app.exitCh)
-	if err != nil {
-		return nil, err
-	}
-	app.server = s
-
-	// --------- Service Registration ---------
+	// --------- Service Registration (GRPC) ---------
 	RegisterServices(app.server.Server, app)
+
+	// Start background workers
+	// PDF / ZIP export workers, global worker pool to limit concurrency and resource (CPU) usage
+	ctx := context.Background()
+	app.StartExportWorker(ctx)
 
 	return app, nil
 }
 
-func BuildDatabase(config *cfg.DatabaseConfig) store.Store {
-	return postgres.New(config)
+// --------- Private init methods ---------
+
+func (app *App) initStore() error {
+	if app.config.Database == nil {
+		return errors.New("database config is nil")
+	}
+	app.Store = postgres.New(app.config.Database)
+	return nil
 }
 
-func (a *App) Start() error { // Change return type to standard error
-	err := a.Store.Open()
+func (app *App) initRedis() error {
+	redisCache, err := cache.NewRedisCache(app.config.Redis.Addr, app.config.Redis.Password, app.config.Redis.DB)
 	if err != nil {
+		return errors.New("unable to initialize Redis", errors.WithCause(err))
+	}
+	app.cache = redisCache
+	return nil
+}
+
+func (app *App) initGRPCClients() error {
+	var err error
+
+	app.storageConn, err = grpc.NewClient(
+		fmt.Sprintf("consul://%s/storage?wait=14s", app.config.Consul.Address),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy": "round_robin"}`),
+	)
+	if err != nil {
+		return errors.New("unable to create storage client", errors.WithCause(err))
+	}
+	app.storageClient = storage.NewFileServiceClient(app.storageConn)
+
+	app.webitelAppConn, err = grpc.NewClient(
+		fmt.Sprintf("consul://%s/go.webitel.app?wait=14s", app.config.Consul.Address),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy": "round_robin"}`),
+	)
+	if err != nil {
+		return errors.New("unable to create webitel app client", errors.WithCause(err))
+	}
+	return nil
+}
+
+func (app *App) initSessionManager() error {
+	manager, err := webitel_app.New(app.webitelAppConn)
+	if err != nil {
+		return errors.New("failed to init session manager", errors.WithCause(err))
+	}
+	app.sessionManager = manager
+	return nil
+}
+
+func (app *App) initServer() error {
+	srv, err := server.BuildServer(app.config.Consul, app.sessionManager, app.exitCh)
+	if err != nil {
+		return errors.New("failed to build server", errors.WithCause(err))
+	}
+	app.server = srv
+	return nil
+}
+
+// Start runs DB, gRPC server and background workers
+func (app *App) Start(ctx context.Context) error {
+	if err := app.Store.Open(); err != nil {
 		return errors.New("failed to open store", errors.WithCause(err))
 	}
-	// * run grpc server
-	go a.server.Start()
-	return <-a.exitCh
+
+	go app.server.Start()
+	app.StartExportWorker(ctx)
+
+	return <-app.exitCh
 }
 
-func (a *App) Stop() error {
-	// close massive modules
-	a.server.Stop()
-	// close grpc connections
-	err := a.storageConn.Close()
-	if err != nil {
-		return err
+// Stop gracefully shuts down all services
+func (app *App) Stop(ctx context.Context) error {
+	app.server.Stop()
+
+	if app.storageConn != nil {
+		if err := app.storageConn.Close(); err != nil {
+			slog.ErrorContext(ctx, "storageConn close error", "err", err)
+		}
 	}
-	err = a.webitelAppConn.Close()
-	if err != nil {
-		return err
+	if app.webitelAppConn != nil {
+		if err := app.webitelAppConn.Close(); err != nil {
+			slog.ErrorContext(ctx, "webitelAppConn close error", "err", err)
+		}
 	}
 
-	// ----- Call the shutdown function for OTEL ----- //
-	if a.shutdown != nil {
-		err := a.shutdown(context.Background())
-		if err != nil {
-			return err
+	if app.shutdown != nil {
+		if err := app.shutdown(ctx); err != nil {
+			slog.ErrorContext(ctx, "shutdown hook error", "err", err)
 		}
 	}
 

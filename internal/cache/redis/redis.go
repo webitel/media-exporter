@@ -73,6 +73,7 @@ func (r *RedisCache) PushExportTask(task model.ExportTask) error {
 		return err
 	}
 	return r.client.RPush(context.Background(), exportQueueKey, data).Err()
+
 }
 
 func (r *RedisCache) PopExportTask() (model.ExportTask, error) {

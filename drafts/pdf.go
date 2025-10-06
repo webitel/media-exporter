@@ -1,4 +1,4 @@
-package app
+package drafts
 
 //
 //import (
@@ -117,7 +117,7 @@ package app
 //	}
 //
 //	m.onceWorkers.Do(func() {
-//		go StartExportWorkers(context.Background(), opts, 4, m.app)
+//		go StartExportWorker(context.Background(), opts, 4, m.app)
 //	})
 //
 //	fileName := fmt.Sprintf("%s.pdf", taskID)
@@ -172,9 +172,9 @@ package app
 //	return out
 //}
 //
-//// StartExportWorkers runs background workers to process export queue.
+//// StartExportWorker runs background workers to process export queue.
 //// workerCtx controls worker lifecycle (use a server-level context on shutdown).
-//func StartExportWorkers(workerCtx context.Context, opts *options.CreateOptions, n int, app *App) {
+//func StartExportWorker(workerCtx context.Context, opts *options.CreateOptions, n int, app *App) {
 //	for i := 0; i < n; i++ {
 //		go func(workerID int) {
 //			for {
