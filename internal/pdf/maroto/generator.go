@@ -36,6 +36,9 @@ func GeneratePDF(files map[string]string, fileInfos map[string]*storage.File) ([
 	}
 
 	for i := 0; i < len(tmpFiles); i += 2 {
+		if tmpFiles[i].Path == "" {
+			continue
+		}
 		m.Row(imageHeight, func() {
 			m.Col(6, func() { tryAddImage(m, tmpFiles[i].Path) })
 			if i+1 < len(tmpFiles) {
@@ -63,7 +66,11 @@ func GeneratePDF(files map[string]string, fileInfos map[string]*storage.File) ([
 }
 
 func tryAddImage(m pdf.Maroto, path string) {
+	if path == "" {
+		fmt.Println("Skipped empty path")
+		return
+	}
 	if err := m.FileImage(path); err != nil {
-		fmt.Println("Error adding image:", err)
+		fmt.Println("Error adding image:", err, "path:", path)
 	}
 }

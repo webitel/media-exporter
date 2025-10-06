@@ -4,27 +4,32 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"time"
 
 	"github.com/webitel/media-exporter/api/storage"
 	"github.com/webitel/media-exporter/internal/model"
-	"github.com/webitel/media-exporter/internal/model/options"
 )
 
-func uploadPDFToStorage(ctx context.Context, opts *options.CreateOptions, app *App, filePath string, task model.ExportTask) (*storage.UploadFileResponse, error) {
+func uploadPDFToStorage(ctx context.Context, session *model.Session, app *App, filePath string, task model.ExportTask) (*storage.UploadFileResponse, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("open file failed: %w", err)
 	}
-	defer f.Close()
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			slog.ErrorContext(ctx, "close file failed", slog.String("file", filePath), err)
+		}
+	}(f)
 
 	stream, err := app.storageClient.UploadFile(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("UploadFile init failed: %w", err)
 	}
 
-	if err := sendFileMetadata(stream, opts, task); err != nil {
+	if err := sendFileMetadata(stream, session, task); err != nil {
 		return nil, err
 	}
 	if err := sendFileChunks(stream, f); err != nil {
@@ -34,7 +39,7 @@ func uploadPDFToStorage(ctx context.Context, opts *options.CreateOptions, app *A
 	return stream.CloseAndRecv()
 }
 
-func sendFileMetadata(stream storage.FileService_UploadFileClient, opts *options.CreateOptions, task model.ExportTask) error {
+func sendFileMetadata(stream storage.FileService_UploadFileClient, session *model.Session, task model.ExportTask) error {
 	chEnum, err := parseChannel(task.Channel)
 	if err != nil {
 		return err
@@ -47,8 +52,8 @@ func sendFileMetadata(stream storage.FileService_UploadFileClient, opts *options
 				Uuid:           task.TaskID,
 				StreamResponse: true,
 				Channel:        chEnum,
-				UploadedBy:     opts.Auth.GetUserId(),
-				DomainId:       opts.Auth.GetDomainId(),
+				UploadedBy:     session.UserID(),
+				DomainId:       session.DomainID(),
 				CreatedAt:      time.Now().UnixMilli(),
 			},
 		},

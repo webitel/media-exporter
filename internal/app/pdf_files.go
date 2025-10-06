@@ -4,50 +4,51 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
 
 	"github.com/disintegration/imaging"
 	"github.com/webitel/media-exporter/api/storage"
-	"github.com/webitel/media-exporter/internal/model/options"
+	"github.com/webitel/media-exporter/internal/model"
 )
 
-func downloadFilesWithPool(ctx context.Context, opts *options.CreateOptions, app *App, files []*storage.File) (map[string]string, map[string]*storage.File, error) {
+func downloadScreenshotsForPDF(ctx context.Context, session *model.Session, app *App, files []*storage.File) (map[string]string, map[string]*storage.File, error) {
 	tmpFiles := make(map[string]string)
 	fileInfos := make(map[string]*storage.File)
 	var mu sync.Mutex
+	var wg sync.WaitGroup
 
-	type job struct{ file *storage.File }
-	jobs := make(chan job, len(files))
-	results := make(chan error, len(files))
-
-	numWorkers := 4
-	for w := 0; w < numWorkers; w++ {
-		go func() {
-			for j := range jobs {
-				tmpPath, err := downloadAndResize(ctx, app.storageClient, opts.Auth.GetDomainId(), j.file)
-				if err == nil {
-					mu.Lock()
-					tmpFiles[fmt.Sprint(j.file.Id)] = tmpPath
-					fileInfos[fmt.Sprint(j.file.Id)] = j.file
-					mu.Unlock()
-				}
-				results <- err
-			}
-		}()
-	}
+	errCh := make(chan error, len(files))
 
 	for _, f := range files {
-		jobs <- job{file: f}
+		wg.Add(1)
+		go func(f *storage.File) {
+			defer wg.Done()
+			tmpPath, err := downloadAndResize(ctx, app.storageClient, session.DomainID(), f)
+			if err != nil {
+				// FIXME commented as we receive IDs from SearchScreenRecordings which do not exist / or have been deleted
+				//errCh <- err
+				slog.ErrorContext(ctx, "downloadAndResize failed", "file_id", f.Id, "error", err)
+				return
+			}
+			mu.Lock()
+			tmpFiles[fmt.Sprint(f.Id)] = tmpPath
+			fileInfos[fmt.Sprint(f.Id)] = f
+			mu.Unlock()
+		}(f)
 	}
-	close(jobs)
 
-	for range files {
-		if err := <-results; err != nil {
+	wg.Wait()
+	close(errCh)
+
+	for err := range errCh {
+		if err != nil {
 			return nil, nil, err
 		}
 	}
+
 	return tmpFiles, fileInfos, nil
 }
 
@@ -55,12 +56,25 @@ func downloadAndResize(ctx context.Context, client storage.FileServiceClient, do
 	if f.Id == 0 || f.Name == "" {
 		return "", fmt.Errorf("invalid file: id=%d, name=%q", f.Id, f.Name)
 	}
+	if !isValidImageMime(f.MimeType) {
+		slog.ErrorContext(ctx, "invalid file: mimeType=%q", f.MimeType)
+		return "", nil
+	}
 	tmpPath := filepath.Join(os.TempDir(), fmt.Sprintf("%d_%s%s", f.Id, f.Name, getFileExt(f.MimeType)))
 	if err := downloadToFile(ctx, client, domainID, f.Id, tmpPath); err != nil {
 		return "", err
 	}
 	_ = resizeImage(tmpPath, 400)
 	return tmpPath, nil
+}
+
+func isValidImageMime(mime string) bool {
+	switch mime {
+	case "image/png", "image/jpeg", "image/jpg", "image/gif", "image/bmp":
+		return true
+	default:
+		return false
+	}
 }
 
 func cleanupFiles(files map[string]string) {

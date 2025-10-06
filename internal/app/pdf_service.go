@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/redis/go-redis/v9"
 	pdfapi "github.com/webitel/media-exporter/api/pdf"
@@ -14,8 +13,8 @@ import (
 
 // PdfService handles PDF export requests (gRPC endpoints).
 type PdfService struct {
-	app         *App
-	onceWorkers sync.Once
+	app *App
+	//onceWorkers sync.Once
 	pdfapi.UnimplementedPdfServiceServer
 }
 
@@ -81,13 +80,17 @@ func (s *PdfService) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGener
 	}
 
 	task := model.ExportTask{
-		TaskID:  taskID,
-		UserID:  req.AgentId,
-		Channel: req.Channel,
-		From:    req.From,
-		To:      req.To,
-		Headers: extractHeadersFromContext(ctx, []string{"authorization", "x-req-id", "x-webitel-access"}),
-		IDs:     req.FileIds,
+		TaskID:   taskID,
+		AgentID:  req.AgentId,
+		UserID:   opts.Auth.GetUserId(),
+		DomainID: opts.Auth.GetDomainId(),
+		Channel:  req.Channel,
+		From:     req.From,
+		To:       req.To,
+		Headers:  extractHeadersFromContext(ctx, []string{"authorization", "x-req-id", "x-webitel-access"}),
+		IDs:      req.FileIds,
+		// specify export type
+		Type: PdfExportType,
 	}
 
 	if err := s.app.cache.PushExportTask(task); err != nil {
@@ -98,10 +101,10 @@ func (s *PdfService) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGener
 		return nil, fmt.Errorf("cache set status failed: %w", err)
 	}
 
-	s.onceWorkers.Do(func() {
-		fmt.Println("[PdfService] starting workers...")
-		go StartExportWorkers(context.Background(), opts, 4, s.app)
-	})
+	//s.onceWorkers.Do(func() {
+	//	fmt.Println("[PdfService] starting workers...")
+	//	go StartExportWorker(context.Background(), s.app)
+	//})
 
 	return &pdfapi.PdfExportMetadata{
 		TaskId:   taskID,

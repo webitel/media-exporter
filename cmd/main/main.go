@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	conf "github.com/webitel/media-exporter/config"
 	"github.com/webitel/media-exporter/internal/app"
@@ -61,7 +63,10 @@ func Run() {
 
 	// Start the application
 	slog.Info("media_exporter.main.starting_application")
-	startErr := application.Start()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	startErr := application.Start(ctx)
 	if startErr != nil {
 		slog.Error("media_exporter.main.application_start_error", slog.String("error", startErr.Error()))
 	} else {
@@ -85,7 +90,9 @@ func initSignals(application *app.App) {
 
 func handleSignals(signal os.Signal, application *app.App) {
 	if signal == syscall.SIGTERM || signal == syscall.SIGINT || signal == syscall.SIGKILL {
-		err := application.Stop()
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		err := application.Stop(ctx)
 		if err != nil {
 			return
 		}
