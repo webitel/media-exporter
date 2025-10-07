@@ -49,7 +49,7 @@ var WebitelAPI = WebitelServicesInfo{
 				Output: "PdfExportChunk",
 				HttpBindings: []*HttpBinding{
 					{
-						Path:   "/export/pdf/{id}",
+						Path:   "/export/pdf/{file_id}",
 						Method: "GET",
 					},
 				},

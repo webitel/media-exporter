@@ -19,9 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	PdfService_GeneratePdfExport_FullMethodName   = "/webitel.pdf.PdfService/GeneratePdfExport"
-	PdfService_DownloadPdfExport_FullMethodName   = "/webitel.pdf.PdfService/DownloadPdfExport"
-	PdfService_GetPdfExportHistory_FullMethodName = "/webitel.pdf.PdfService/GetPdfExportHistory"
+	PdfService_GeneratePdfExport_FullMethodName   = "/webitel_media_exporter.PdfService/GeneratePdfExport"
+	PdfService_DownloadPdfExport_FullMethodName   = "/webitel_media_exporter.PdfService/DownloadPdfExport"
+	PdfService_GetPdfExportHistory_FullMethodName = "/webitel_media_exporter.PdfService/GetPdfExportHistory"
 )
 
 // PdfServiceClient is the client API for PdfService service.
@@ -192,7 +192,7 @@ func _PdfService_GetPdfExportHistory_Handler(srv interface{}, ctx context.Contex
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var PdfService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "webitel.pdf.PdfService",
+	ServiceName: "webitel_media_exporter.PdfService",
 	HandlerType: (*PdfServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

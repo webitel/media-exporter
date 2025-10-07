@@ -52,7 +52,7 @@ func setTaskStatus(app *App, historyID int64, taskID, status string, updatedBy i
 // streamDownloadFile streams file chunks via gRPC to the client
 func streamDownloadFile(ctx context.Context, client storage.FileServiceClient, req *pdfapi.PdfDownloadRequest, stream pdfapi.PdfService_DownloadPdfExportServer) error {
 	s, err := client.DownloadFile(ctx, &storage.DownloadFileRequest{
-		Id:       req.GetExportId(),
+		Id:       req.GetFileId(),
 		DomainId: req.GetDomainId(),
 	})
 	if err != nil {
