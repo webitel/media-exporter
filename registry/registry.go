@@ -6,7 +6,7 @@ import (
 
 const (
 	DeregisterCriticalServiceAfter = 30 * time.Second
-	ServiceName                    = "webitel-media-exporter"
+	ServiceName                    = "webitel_media_exporter"
 	CheckInterval                  = 1 * time.Minute
 )
 
