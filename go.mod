@@ -7,7 +7,7 @@ require (
 	buf.build/gen/go/webitel/webitel-go/protocolbuffers/go v1.36.9-20250916150832-6d5fea27a7f5.1
 	github.com/Masterminds/squirrel v1.5.4
 	github.com/disintegration/imaging v1.6.2
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.3
 	github.com/hashicorp/consul/api v1.32.3
 	github.com/jackc/pgconn v1.14.3
 	github.com/jackc/pgx/v5 v5.7.5
@@ -25,9 +25,9 @@ require (
 	go.opentelemetry.io/otel/sdk v1.38.0
 	go.opentelemetry.io/otel/trace v1.38.0
 	golang.org/x/sync v0.17.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20250908214217-97024824d090
+	google.golang.org/genproto/googleapis/api v0.0.0-20250929231259-57b25ae835d4
 	google.golang.org/grpc v1.75.1
-	google.golang.org/protobuf v1.36.9
+	google.golang.org/protobuf v1.36.10
 )
 
 require (
@@ -105,8 +105,8 @@ require (
 	golang.org/x/exp v0.0.0-20250808145144-a408d31f581a // indirect
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250826171959-ef028d996bc1 // indirect
+	golang.org/x/text v0.29.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250929231259-57b25ae835d4 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
