@@ -2,8 +2,8 @@ buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.34.2-2024092016423
 buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.34.2-20240920164238-5a7b106cbb87.2/go.mod h1:ylS4c28ACSI59oJrOdW4pHS4n0Hw4TgSPHn8rpHl4Yw=
 buf.build/gen/go/webitel/webitel-go/grpc/go v1.5.1-20251030120059-48ed7f8f00c0.2 h1:nJtQa3X3vFpy+iaIsQPKO4kXEsV1lmqekgP459vdxBI=
 buf.build/gen/go/webitel/webitel-go/grpc/go v1.5.1-20251030120059-48ed7f8f00c0.2/go.mod h1:Bd5Qre3WQ5dKk1gPcu80UOn279PRnK5BwfEmHJVovUw=
-buf.build/gen/go/webitel/webitel-go/protocolbuffers/go v1.36.10-20251030120059-48ed7f8f00c0.1 h1:vosfpiw4sMaIolMcO8RF98XOt5thxUG5UmIg9T4JmmQ=
-buf.build/gen/go/webitel/webitel-go/protocolbuffers/go v1.36.10-20251030120059-48ed7f8f00c0.1/go.mod h1:asUIXIFK9bU3vxG0doZIj6wpG5PNIikay41YVYh2P5Q=
+buf.build/gen/go/webitel/webitel-go/protocolbuffers/go v1.36.10-20251106162115-6c76f535152a.1 h1:aoxds+6hk9xDPYGqpqbfEi/Ng38UdXsFyj7c7+wLcS0=
+buf.build/gen/go/webitel/webitel-go/protocolbuffers/go v1.36.10-20251106162115-6c76f535152a.1/go.mod h1:asUIXIFK9bU3vxG0doZIj6wpG5PNIikay41YVYh2P5Q=
 cel.dev/expr v0.24.0 h1:56OvJKSH3hDGL0ml5uSxZmz3/3Pq4tJ+fb1unVLAFcY=
 cel.dev/expr v0.24.0/go.mod h1:hLPLo1W4QUmuYdA72RBX06QTs6MXw941piREPl3Yfiw=
 github.com/BurntSushi/toml v1.5.0 h1:W5quZX/G/csjUnuI8SUYlsHs9M38FC7znL0lIO+DvMg=
