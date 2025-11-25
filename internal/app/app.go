@@ -61,11 +61,6 @@ func New(config *cfg.AppConfig, shutdown func(ctx context.Context) error) (*App,
 	// --------- Service Registration (GRPC) ---------
 	RegisterServices(app.server.Server, app)
 
-	// Start background workers
-	// PDF / ZIP export workers, global worker pool to limit concurrency and resource (CPU) usage
-	ctx := context.Background()
-	app.StartExportWorker(ctx)
-
 	return app, nil
 }
 
@@ -143,25 +138,45 @@ func (app *App) Start(ctx context.Context) error {
 }
 
 // Stop gracefully shuts down all services
-func (app *App) Stop(ctx context.Context) error {
-	app.server.Stop()
+func (app *App) Stop() error {
+	slog.Info("media_exporter.main.stop_starting")
+
+	if app.server != nil {
+		app.server.Stop()
+		slog.Info("server stopped")
+	}
 
 	if app.storageConn != nil {
 		if err := app.storageConn.Close(); err != nil {
-			slog.ErrorContext(ctx, "storageConn close error", "err", err)
+			slog.Error("storageConn close error", "err", err)
+		} else {
+			slog.Info("storageConn closed")
 		}
 	}
 	if app.webitelAppConn != nil {
 		if err := app.webitelAppConn.Close(); err != nil {
-			slog.ErrorContext(ctx, "webitelAppConn close error", "err", err)
+			slog.Error("webitelAppConn close error", "err", err)
+		} else {
+			slog.Info("webitelAppConn closed")
+		}
+	}
+
+	if app.cache != nil {
+		if err := app.cache.Clear(); err != nil {
+			slog.Error("redis cache clear error", "err", err)
+		} else {
+			slog.Info("redis cache cleared")
 		}
 	}
 
 	if app.shutdown != nil {
-		if err := app.shutdown(ctx); err != nil {
-			slog.ErrorContext(ctx, "shutdown hook error", "err", err)
+		if err := app.shutdown(context.Background()); err != nil {
+			slog.Error("shutdown hook error", "err", err)
+		} else {
+			slog.Info("shutdown hook executed")
 		}
 	}
 
+	slog.Info("media_exporter.main.stop_complete")
 	return nil
 }

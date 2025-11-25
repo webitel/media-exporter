@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"strings"
 
 	"github.com/redis/go-redis/v9"
 	pdfapi "github.com/webitel/media-exporter/api/pdf"
@@ -38,12 +40,18 @@ func (s *PdfService) GetPdfExportHistory(ctx context.Context, req *pdfapi.PdfHis
 }
 
 func (s *PdfService) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGenerateRequest) (*pdfapi.PdfExportMetadata, error) {
-
-	taskID := fmt.Sprintf("%d:%d:%s", req.AgentId, req.To, req.Channel)
-
+	////FIXME remove later
 	//if err := s.app.cache.Clear(); err != nil {
 	//	return nil, fmt.Errorf("failed to clear cache: %w", err)
 	//}
+
+	fileIDsStr := make([]string, len(req.FileIds))
+	for i, id := range req.FileIds {
+		fileIDsStr[i] = fmt.Sprintf("%d", id)
+	}
+
+	taskID := fmt.Sprintf("%d:%d:%s:%s", req.AgentId, req.To, req.Channel, strings.Join(fileIDsStr, ","))
+	slog.InfoContext(ctx, "GeneratePdfExport taskID", "taskID", taskID)
 
 	status, err := s.app.cache.GetExportStatus(taskID)
 	if err != nil && !errors.Is(err, redis.Nil) {
@@ -101,11 +109,6 @@ func (s *PdfService) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGener
 	if err := s.app.cache.SetExportStatus(taskID, "pending"); err != nil {
 		return nil, fmt.Errorf("cache set status failed: %w", err)
 	}
-
-	//s.onceWorkers.Do(func() {
-	//	fmt.Println("[PdfService] starting workers...")
-	//	go StartExportWorker(context.Background(), s.app)
-	//})
 
 	return &pdfapi.PdfExportMetadata{
 		TaskId:   taskID,

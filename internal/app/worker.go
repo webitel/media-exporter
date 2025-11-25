@@ -2,7 +2,7 @@ package app
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 	"runtime"
 	"time"
 
@@ -20,13 +20,15 @@ const (
 func (app *App) StartExportWorker(ctx context.Context) {
 	numWorkers := app.config.Export.Workers
 	if numWorkers <= 0 {
-		numWorkers = 4 // fallback by default
+		numWorkers = 4
 	}
 
 	maxWorkers := runtime.NumCPU() * 2
 	if numWorkers > maxWorkers {
 		numWorkers = maxWorkers
 	}
+
+	slog.InfoContext(ctx, "starting export workers", "count", numWorkers)
 
 	for i := 0; i < numWorkers; i++ {
 		go func(workerID int) {
@@ -43,21 +45,24 @@ func (app *App) StartExportWorker(ctx context.Context) {
 
 					session, err := model.NewSession(task.UserID, task.DomainID, task.Headers[authorizationHeader])
 					if err != nil {
+
 						_ = app.cache.ClearExportTask(task.TaskID)
 						continue
 					}
 
 					switch task.Type {
+
 					case PdfExportType:
 						if err := handlePdfTask(ctx, session, app, task); err != nil {
 							_ = app.cache.ClearExportTask(task.TaskID)
 						}
 					case ZipExportType:
 						panic("not implemented")
-					//	if err := handleZipTask(ctx, session, app, task); err != nil {
-					//		_ = app.cache.ClearExportTask(task.TaskID)
 					default:
-						fmt.Printf("[WORKER %d] unknown export type: %s\n", workerID, task.Type)
+						slog.WarnContext(ctx, "unknown export type",
+							"workerID", workerID,
+							"type", task.Type,
+							"taskID", task.TaskID)
 					}
 				}
 			}

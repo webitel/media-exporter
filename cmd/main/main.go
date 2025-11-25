@@ -51,9 +51,6 @@ func Run() {
 		return
 	}
 
-	// Initialize signal handling for graceful shutdown
-	initSignals(application)
-
 	// Log the configuration
 	slog.Debug("media_exporter.main.configuration_loaded",
 		slog.String("consul", config.Consul.Address),
@@ -64,17 +61,31 @@ func Run() {
 	// Start the application
 	slog.Info("media_exporter.main.starting_application")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	startErr := application.Start(ctx)
-	if startErr != nil {
-		slog.Error("media_exporter.main.application_start_error", slog.String("error", startErr.Error()))
-	} else {
-		slog.Info("media_exporter.main.application_started_successfully")
+
+	go func() {
+		if err := application.Start(ctx); err != nil {
+			slog.Error("media_exporter.main.application_start_error", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+	}()
+
+	slog.Info("media_exporter.main.initializing_stop_signals")
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+
+	sig := <-sigChan
+	slog.Info("received signal, starting shutdown", "signal", sig.String())
+
+	if err := application.Stop(); err != nil {
+		slog.Error("shutdown_error", "error", err.Error())
 	}
 
+	time.Sleep(100 * time.Millisecond)
+	slog.Info("service gracefully stopped")
+	os.Exit(0)
 }
-
 func initSignals(application *app.App) {
 	slog.Info("media_exporter.main.initializing_stop_signals", slog.String("main", "initializing_stop_signals"))
 	sigch := make(chan os.Signal, 1)
@@ -90,9 +101,8 @@ func initSignals(application *app.App) {
 
 func handleSignals(signal os.Signal, application *app.App) {
 	if signal == syscall.SIGTERM || signal == syscall.SIGINT || signal == syscall.SIGKILL {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		err := application.Stop(ctx)
+
+		err := application.Stop()
 		if err != nil {
 			return
 		}
