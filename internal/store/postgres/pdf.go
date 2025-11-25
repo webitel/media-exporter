@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -55,7 +56,7 @@ func (m *Pdf) GetPdfExportHistory(opts *options.SearchOptions, req *pdfapi.PdfHi
 		).
 		From("media_exporter.pdf_export_history").
 		Where(sq.Eq{"agent_id": req.AgentId}).
-		Where(sq.Eq{"uploaded_by": opts.Auth.GetUserId()}).
+		//Where(sq.Eq{"uploaded_by": opts.Auth.GetUserId()}).
 		OrderBy("uploaded_at DESC").
 		Offset(uint64(offset)).
 		Limit(uint64(limit))
@@ -74,10 +75,11 @@ func (m *Pdf) GetPdfExportHistory(opts *options.SearchOptions, req *pdfapi.PdfHi
 	var records []*pdfapi.PdfHistoryRecord
 	for rows.Next() {
 		var record model.ExportHistory
+		var fileID sql.NullInt64
 		err := rows.Scan(
 			&record.ID,
 			&record.Name,
-			&record.FileID,
+			&fileID,
 			&record.Mime,
 			&record.UploadedAt,
 			&record.UpdatedAt,
@@ -87,6 +89,12 @@ func (m *Pdf) GetPdfExportHistory(opts *options.SearchOptions, req *pdfapi.PdfHi
 		)
 		if err != nil {
 			return nil, dberr.NewDBInternalError("get_pdf_export_history", err)
+		}
+
+		if fileID.Valid {
+			record.FileID = fileID.Int64
+		} else {
+			record.FileID = 0
 		}
 
 		records = append(records, &pdfapi.PdfHistoryRecord{
