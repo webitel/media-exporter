@@ -38,9 +38,6 @@ func (s *PdfService) GetPdfExportHistory(ctx context.Context, req *pdfapi.PdfHis
 }
 
 func (s *PdfService) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGenerateRequest) (*pdfapi.PdfExportMetadata, error) {
-	if req.FileIds == nil || len(req.FileIds) == 0 {
-		return nil, fmt.Errorf("file_ids is required")
-	}
 
 	taskID := fmt.Sprintf("%d:%d:%s", req.AgentId, req.To, req.Channel)
 
