@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	buf.build/gen/go/webitel/webitel-go/grpc/go v1.5.1-20251120142856-5d7af0448070.2
-	buf.build/gen/go/webitel/webitel-go/protocolbuffers/go v1.36.10-20251106162115-6c76f535152a.1
+	buf.build/gen/go/webitel/webitel-go/protocolbuffers/go v1.36.10-20251127141657-bade3e537e22.1
 	github.com/Masterminds/squirrel v1.5.4
 	github.com/disintegration/imaging v1.6.2
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.3
