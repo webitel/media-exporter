@@ -85,7 +85,7 @@ func handlePdfTask(ctx context.Context, session *model.Session, app *App, task m
 		return fmt.Errorf("save PDF failed: %w", err)
 	}
 
-	res, err := uploadPDFToStorage(ctx, session, app, fileName, task)
+	res, err := uploadPDFToStorage(ctx, session, app, tempFilePath, task)
 	if err != nil {
 		slog.ErrorContext(ctx, "uploadPDFToStorage failed", "taskID", task.TaskID, "error", err)
 		_ = setTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
