@@ -49,13 +49,35 @@ func (s *PdfService) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGener
 		return nil, err
 	}
 	now := time.Now()
-	fileName := fmt.Sprintf("pdf_ss_%d_%04d-%02d-%02d_%02d_%02d_%02d.pdf",
-		opts.Auth.GetUserId(),
-		now.Year(), now.Month(), now.Day(),
-		now.Hour(), now.Minute(), now.Second(),
-	)
+	var fileName string
+	var taskID string
+	var channelStr string
 
-	taskID := fileName
+	switch req.Channel {
+	case pdfapi.PdfChannel_CALL:
+		channelStr = "call"
+		fileName = fmt.Sprintf("pdf_vc_%d_%04d-%02d-%02d_%02d_%02d_%02d.pdf",
+			opts.Auth.GetUserId(),
+			now.Year(), now.Month(), now.Day(),
+			now.Hour(), now.Minute(), now.Second(),
+		)
+	case pdfapi.PdfChannel_SCREENRECORDING:
+		channelStr = "screenrecording"
+		fileName = fmt.Sprintf("pdf_ss_%d_%04d-%02d-%02d_%02d_%02d_%02d.pdf",
+			opts.Auth.GetUserId(),
+			now.Year(), now.Month(), now.Day(),
+			now.Hour(), now.Minute(), now.Second(),
+		)
+	default:
+		channelStr = "unknown"
+		fileName = fmt.Sprintf("pdf_unknown_%d_%04d-%02d-%02d_%02d_%02d_%02d.pdf",
+			opts.Auth.GetUserId(),
+			now.Year(), now.Month(), now.Day(),
+			now.Hour(), now.Minute(), now.Second(),
+		)
+	}
+
+	taskID = fileName // використовуємо fileName як taskID
 	slog.InfoContext(ctx, "GeneratePdfExport taskID", "taskID", taskID)
 
 	status, err := s.app.cache.GetExportStatus(taskID)
@@ -87,16 +109,6 @@ func (s *PdfService) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGener
 	if err := s.app.cache.SetExportHistoryID(taskID, historyID); err != nil {
 
 		return nil, fmt.Errorf("cache set historyID failed: %w", err)
-	}
-
-	var channelStr string
-	switch req.Channel {
-	case pdfapi.PdfChannel_CALL:
-		channelStr = "call"
-	case pdfapi.PdfChannel_SCREENRECORDING:
-		channelStr = "screenrecording"
-	default:
-		channelStr = "unknown"
 	}
 
 	task := model.ExportTask{

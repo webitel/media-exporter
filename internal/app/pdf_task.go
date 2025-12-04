@@ -16,7 +16,6 @@ import (
 )
 
 func handlePdfTask(ctx context.Context, session *model.Session, app *App, task model.ExportTask) error {
-
 	historyID, err := app.cache.GetExportHistoryID(task.TaskID)
 	if err != nil {
 
@@ -72,11 +71,27 @@ func handlePdfTask(ctx context.Context, session *model.Session, app *App, task m
 	}
 
 	now := time.Now()
-	fileName := fmt.Sprintf("pdf_ss_%d_%04d-%02d-%02d_%02d_%02d_%02d.pdf",
-		session.UserID(),
-		now.Year(), now.Month(), now.Day(),
-		now.Hour(), now.Minute(), now.Second(),
-	)
+	var fileName string
+	switch task.Channel {
+	case "call":
+		fileName = fmt.Sprintf("pdf_vc_%d_%04d-%02d-%02d_%02d_%02d_%02d.pdf",
+			session.UserID(),
+			now.Year(), now.Month(), now.Day(),
+			now.Hour(), now.Minute(), now.Second(),
+		)
+	case "screenrecording":
+		fileName = fmt.Sprintf("pdf_ss_%d_%04d-%02d-%02d_%02d_%02d_%02d.pdf",
+			session.UserID(),
+			now.Year(), now.Month(), now.Day(),
+			now.Hour(), now.Minute(), now.Second(),
+		)
+	default:
+		fileName = fmt.Sprintf("pdf_unknown_%d_%04d-%02d-%02d_%02d_%02d_%02d.pdf",
+			session.UserID(),
+			now.Year(), now.Month(), now.Day(),
+			now.Hour(), now.Minute(), now.Second(),
+		)
+	}
 
 	tempFilePath := filepath.Join(app.config.TempDir, fileName)
 	if err := SavePDFToTemp(tempFilePath, pdfBytes); err != nil {
