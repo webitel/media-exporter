@@ -27,15 +27,14 @@ func extractHeadersFromContext(ctx context.Context, keys []string) map[string]st
 
 func parseChannel(channel string) (storage.UploadFileChannel, error) {
 	switch channel {
-	case "screenshot":
-		return storage.UploadFileChannel_ScreenshotChannel, nil
-	case "screensharing":
-		return storage.UploadFileChannel_ScreenSharingChannel, nil
+	case "call":
+		return storage.UploadFileChannel_CallChannel, nil
+	case "screenrecording":
+		return storage.UploadFileChannel_ScreenRecordingChannel, nil
 	default:
-		return 0, fmt.Errorf("invalid channel: %s", channel)
+		return 0, fmt.Errorf("invalid channel: %v", channel)
 	}
 }
-
 func setTaskStatus(app *App, historyID int64, taskID, status string, updatedBy int64, fileID *int64) error {
 	_ = app.cache.SetExportStatus(taskID, status)
 	return app.Store.Pdf().UpdatePdfExportStatus(&model.UpdateExportStatus{

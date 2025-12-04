@@ -40,7 +40,6 @@ func (s *PdfService) GetPdfExportHistory(ctx context.Context, req *pdfapi.PdfHis
 }
 
 func (s *PdfService) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGenerateRequest) (*pdfapi.PdfExportMetadata, error) {
-
 	fileIDsStr := make([]string, len(req.FileIds))
 	for i, id := range req.FileIds {
 		fileIDsStr[i] = fmt.Sprintf("%d", id)
@@ -90,12 +89,22 @@ func (s *PdfService) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGener
 		return nil, fmt.Errorf("cache set historyID failed: %w", err)
 	}
 
+	var channelStr string
+	switch req.Channel {
+	case pdfapi.PdfChannel_CALL:
+		channelStr = "call"
+	case pdfapi.PdfChannel_SCREENRECORDING:
+		channelStr = "screenrecording"
+	default:
+		channelStr = "unknown"
+	}
+
 	task := model.ExportTask{
 		TaskID:   taskID,
 		AgentID:  req.AgentId,
 		UserID:   opts.Auth.GetUserId(),
 		DomainID: opts.Auth.GetDomainId(),
-		Channel:  req.Channel,
+		Channel:  channelStr,
 		From:     req.From,
 		To:       req.To,
 		Headers:  extractHeadersFromContext(ctx, []string{"authorization", "x-req-id", "x-webitel-access"}),

@@ -22,6 +22,52 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type PdfChannel int32
+
+const (
+	PdfChannel_CALL            PdfChannel = 0
+	PdfChannel_SCREENRECORDING PdfChannel = 1
+)
+
+// Enum value maps for PdfChannel.
+var (
+	PdfChannel_name = map[int32]string{
+		0: "CALL",
+		1: "SCREENRECORDING",
+	}
+	PdfChannel_value = map[string]int32{
+		"CALL":            0,
+		"SCREENRECORDING": 1,
+	}
+)
+
+func (x PdfChannel) Enum() *PdfChannel {
+	p := new(PdfChannel)
+	*p = x
+	return p
+}
+
+func (x PdfChannel) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (PdfChannel) Descriptor() protoreflect.EnumDescriptor {
+	return file_pdf_proto_enumTypes[0].Descriptor()
+}
+
+func (PdfChannel) Type() protoreflect.EnumType {
+	return &file_pdf_proto_enumTypes[0]
+}
+
+func (x PdfChannel) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use PdfChannel.Descriptor instead.
+func (PdfChannel) EnumDescriptor() ([]byte, []int) {
+	return file_pdf_proto_rawDescGZIP(), []int{0}
+}
+
 // Status of the PDF export process.
 type PdfExportStatus int32
 
@@ -62,11 +108,11 @@ func (x PdfExportStatus) String() string {
 }
 
 func (PdfExportStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_pdf_proto_enumTypes[0].Descriptor()
+	return file_pdf_proto_enumTypes[1].Descriptor()
 }
 
 func (PdfExportStatus) Type() protoreflect.EnumType {
-	return &file_pdf_proto_enumTypes[0]
+	return &file_pdf_proto_enumTypes[1]
 }
 
 func (x PdfExportStatus) Number() protoreflect.EnumNumber {
@@ -75,17 +121,17 @@ func (x PdfExportStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use PdfExportStatus.Descriptor instead.
 func (PdfExportStatus) EnumDescriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{0}
+	return file_pdf_proto_rawDescGZIP(), []int{1}
 }
 
 // Request for generating a PDF export.
 type PdfGenerateRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	AgentId       int64                  `protobuf:"varint,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`        // Agent ID for which the export is generated.
-	Channel       string                 `protobuf:"bytes,2,opt,name=channel,proto3" json:"channel,omitempty"`                        // Channel type (e.g., "screenshot").
-	From          int64                  `protobuf:"varint,3,opt,name=from,proto3" json:"from,omitempty"`                             // Start timestamp (Unix millis).
-	To            int64                  `protobuf:"varint,4,opt,name=to,proto3" json:"to,omitempty"`                                 // End timestamp (Unix millis).
-	FileIds       []int64                `protobuf:"varint,5,rep,packed,name=file_ids,json=fileIds,proto3" json:"file_ids,omitempty"` // Optional list of specific file IDs to include.
+	AgentId       int64                  `protobuf:"varint,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`                         // Agent ID for which the export is generated.
+	Channel       PdfChannel             `protobuf:"varint,2,opt,name=channel,proto3,enum=webitel_media_exporter.PdfChannel" json:"channel,omitempty"` // Channel type (e.g., "screenshot").
+	From          int64                  `protobuf:"varint,3,opt,name=from,proto3" json:"from,omitempty"`                                              // Start timestamp (Unix millis).
+	To            int64                  `protobuf:"varint,4,opt,name=to,proto3" json:"to,omitempty"`                                                  // End timestamp (Unix millis).
+	FileIds       []int64                `protobuf:"varint,5,rep,packed,name=file_ids,json=fileIds,proto3" json:"file_ids,omitempty"`                  // Optional list of specific file IDs to include.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -127,11 +173,11 @@ func (x *PdfGenerateRequest) GetAgentId() int64 {
 	return 0
 }
 
-func (x *PdfGenerateRequest) GetChannel() string {
+func (x *PdfGenerateRequest) GetChannel() PdfChannel {
 	if x != nil {
 		return x.Channel
 	}
-	return ""
+	return PdfChannel_CALL
 }
 
 func (x *PdfGenerateRequest) GetFrom() int64 {
@@ -565,10 +611,10 @@ var File_pdf_proto protoreflect.FileDescriptor
 
 const file_pdf_proto_rawDesc = "" +
 	"\n" +
-	"\tpdf.proto\x12\x16webitel_media_exporter\x1a\x1cgoogle/api/annotations.proto\"\x88\x01\n" +
+	"\tpdf.proto\x12\x16webitel_media_exporter\x1a\x1cgoogle/api/annotations.proto\"\xac\x01\n" +
 	"\x12PdfGenerateRequest\x12\x19\n" +
-	"\bagent_id\x18\x01 \x01(\x03R\aagentId\x12\x18\n" +
-	"\achannel\x18\x02 \x01(\tR\achannel\x12\x12\n" +
+	"\bagent_id\x18\x01 \x01(\x03R\aagentId\x12<\n" +
+	"\achannel\x18\x02 \x01(\x0e2\".webitel_media_exporter.PdfChannelR\achannel\x12\x12\n" +
 	"\x04from\x18\x03 \x01(\x03R\x04from\x12\x0e\n" +
 	"\x02to\x18\x04 \x01(\x03R\x02to\x12\x19\n" +
 	"\bfile_ids\x18\x05 \x03(\x03R\afileIds\"J\n" +
@@ -604,7 +650,11 @@ const file_pdf_proto_rawDesc = "" +
 	"created_by\x18\a \x01(\x03R\tcreatedBy\x12\x1d\n" +
 	"\n" +
 	"updated_by\x18\b \x01(\x03R\tupdatedBy\x12?\n" +
-	"\x06status\x18\t \x01(\x0e2'.webitel_media_exporter.PdfExportStatusR\x06status*\xaf\x01\n" +
+	"\x06status\x18\t \x01(\x0e2'.webitel_media_exporter.PdfExportStatusR\x06status*+\n" +
+	"\n" +
+	"PdfChannel\x12\b\n" +
+	"\x04CALL\x10\x00\x12\x13\n" +
+	"\x0fSCREENRECORDING\x10\x01*\xaf\x01\n" +
 	"\x0fPdfExportStatus\x12!\n" +
 	"\x1dPDF_EXPORT_STATUS_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19PDF_EXPORT_STATUS_PENDING\x10\x01\x12 \n" +
@@ -630,32 +680,34 @@ func file_pdf_proto_rawDescGZIP() []byte {
 	return file_pdf_proto_rawDescData
 }
 
-var file_pdf_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_pdf_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_pdf_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_pdf_proto_goTypes = []any{
-	(PdfExportStatus)(0),       // 0: webitel_media_exporter.PdfExportStatus
-	(*PdfGenerateRequest)(nil), // 1: webitel_media_exporter.PdfGenerateRequest
-	(*PdfDownloadRequest)(nil), // 2: webitel_media_exporter.PdfDownloadRequest
-	(*PdfExportMetadata)(nil),  // 3: webitel_media_exporter.PdfExportMetadata
-	(*PdfExportChunk)(nil),     // 4: webitel_media_exporter.PdfExportChunk
-	(*PdfHistoryRequest)(nil),  // 5: webitel_media_exporter.PdfHistoryRequest
-	(*PdfHistoryResponse)(nil), // 6: webitel_media_exporter.PdfHistoryResponse
-	(*PdfHistoryRecord)(nil),   // 7: webitel_media_exporter.PdfHistoryRecord
+	(PdfChannel)(0),            // 0: webitel_media_exporter.PdfChannel
+	(PdfExportStatus)(0),       // 1: webitel_media_exporter.PdfExportStatus
+	(*PdfGenerateRequest)(nil), // 2: webitel_media_exporter.PdfGenerateRequest
+	(*PdfDownloadRequest)(nil), // 3: webitel_media_exporter.PdfDownloadRequest
+	(*PdfExportMetadata)(nil),  // 4: webitel_media_exporter.PdfExportMetadata
+	(*PdfExportChunk)(nil),     // 5: webitel_media_exporter.PdfExportChunk
+	(*PdfHistoryRequest)(nil),  // 6: webitel_media_exporter.PdfHistoryRequest
+	(*PdfHistoryResponse)(nil), // 7: webitel_media_exporter.PdfHistoryResponse
+	(*PdfHistoryRecord)(nil),   // 8: webitel_media_exporter.PdfHistoryRecord
 }
 var file_pdf_proto_depIdxs = []int32{
-	7, // 0: webitel_media_exporter.PdfHistoryResponse.data:type_name -> webitel_media_exporter.PdfHistoryRecord
-	0, // 1: webitel_media_exporter.PdfHistoryRecord.status:type_name -> webitel_media_exporter.PdfExportStatus
-	1, // 2: webitel_media_exporter.PdfService.GeneratePdfExport:input_type -> webitel_media_exporter.PdfGenerateRequest
-	2, // 3: webitel_media_exporter.PdfService.DownloadPdfExport:input_type -> webitel_media_exporter.PdfDownloadRequest
-	5, // 4: webitel_media_exporter.PdfService.GetPdfExportHistory:input_type -> webitel_media_exporter.PdfHistoryRequest
-	3, // 5: webitel_media_exporter.PdfService.GeneratePdfExport:output_type -> webitel_media_exporter.PdfExportMetadata
-	4, // 6: webitel_media_exporter.PdfService.DownloadPdfExport:output_type -> webitel_media_exporter.PdfExportChunk
-	6, // 7: webitel_media_exporter.PdfService.GetPdfExportHistory:output_type -> webitel_media_exporter.PdfHistoryResponse
-	5, // [5:8] is the sub-list for method output_type
-	2, // [2:5] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	0, // 0: webitel_media_exporter.PdfGenerateRequest.channel:type_name -> webitel_media_exporter.PdfChannel
+	8, // 1: webitel_media_exporter.PdfHistoryResponse.data:type_name -> webitel_media_exporter.PdfHistoryRecord
+	1, // 2: webitel_media_exporter.PdfHistoryRecord.status:type_name -> webitel_media_exporter.PdfExportStatus
+	2, // 3: webitel_media_exporter.PdfService.GeneratePdfExport:input_type -> webitel_media_exporter.PdfGenerateRequest
+	3, // 4: webitel_media_exporter.PdfService.DownloadPdfExport:input_type -> webitel_media_exporter.PdfDownloadRequest
+	6, // 5: webitel_media_exporter.PdfService.GetPdfExportHistory:input_type -> webitel_media_exporter.PdfHistoryRequest
+	4, // 6: webitel_media_exporter.PdfService.GeneratePdfExport:output_type -> webitel_media_exporter.PdfExportMetadata
+	5, // 7: webitel_media_exporter.PdfService.DownloadPdfExport:output_type -> webitel_media_exporter.PdfExportChunk
+	7, // 8: webitel_media_exporter.PdfService.GetPdfExportHistory:output_type -> webitel_media_exporter.PdfHistoryResponse
+	6, // [6:9] is the sub-list for method output_type
+	3, // [3:6] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_pdf_proto_init() }
@@ -668,7 +720,7 @@ func file_pdf_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pdf_proto_rawDesc), len(file_pdf_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      2,
 			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
