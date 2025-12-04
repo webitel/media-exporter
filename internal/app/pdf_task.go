@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/webitel/media-exporter/api/storage"
 	"github.com/webitel/media-exporter/internal/model"
@@ -36,12 +39,17 @@ func handlePdfTask(ctx context.Context, session *model.Session, app *App, task m
 	filesResp, err := app.storageClient.SearchScreenRecordings(ctx, &storage.SearchScreenRecordingsRequest{
 		Id:      task.IDs,
 		Channel: enumChannel,
-		UserId:  session.UserID(),
 		UploadedAt: &engine.FilterBetween{
 			From: task.From,
 			To:   task.To,
 		},
 	})
+
+	if filesResp == nil || filesResp.Items == nil || len(filesResp.Items) == 0 {
+		_ = setTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
+		return fmt.Errorf("failed to find files: %w", err)
+	}
+
 	if err != nil {
 		slog.ErrorContext(ctx, "SearchScreenRecordings failed", "taskID", task.TaskID, "error", err)
 		_ = setTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
@@ -63,8 +71,15 @@ func handlePdfTask(ctx context.Context, session *model.Session, app *App, task m
 		return fmt.Errorf("PDF generation failed: %w", err)
 	}
 
-	fileName := fmt.Sprintf("%s.pdf", task.TaskID)
-	if err := SavePDFToFile(pdfBytes, fileName); err != nil {
+	now := time.Now()
+	fileName := fmt.Sprintf("pdf_ss_%d_%04d-%02d-%02d_%02d_%02d_%02d.pdf",
+		session.UserID(),
+		now.Year(), now.Month(), now.Day(),
+		now.Hour(), now.Minute(), now.Second(),
+	)
+
+	tempFilePath := filepath.Join(app.config.TempDir, fileName)
+	if err := SavePDFToTemp(tempFilePath, pdfBytes); err != nil {
 		slog.ErrorContext(ctx, "SavePDFToFile failed", "taskID", task.TaskID, "error", err)
 		_ = setTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
 		return fmt.Errorf("save PDF failed: %w", err)
@@ -85,6 +100,15 @@ func handlePdfTask(ctx context.Context, session *model.Session, app *App, task m
 	_ = app.cache.ClearExportTask(task.TaskID)
 
 	slog.InfoContext(ctx, "PDF task completed successfully", "taskID", task.TaskID, "fileID", res.FileId)
+
+	return nil
+}
+
+func SavePDFToTemp(path string, pdfBytes []byte) error {
+	err := os.WriteFile(path, pdfBytes, 0644)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

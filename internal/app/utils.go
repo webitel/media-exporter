@@ -2,8 +2,9 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"os"
+	"io"
 	"strings"
 
 	pdfapi "github.com/webitel/media-exporter/api/pdf"
@@ -35,10 +36,6 @@ func parseChannel(channel string) (storage.UploadFileChannel, error) {
 	}
 }
 
-func SavePDFToFile(pdfBytes []byte, filename string) error {
-	return os.WriteFile(filename, pdfBytes, 0644)
-}
-
 func setTaskStatus(app *App, historyID int64, taskID, status string, updatedBy int64, fileID *int64) error {
 	_ = app.cache.SetExportStatus(taskID, status)
 	return app.Store.Pdf().UpdatePdfExportStatus(&model.UpdateExportStatus{
@@ -61,9 +58,10 @@ func streamDownloadFile(ctx context.Context, client storage.FileServiceClient, r
 	for {
 		chunk, err := s.Recv()
 		if err != nil {
-			if err.Error() == "EOF" {
+			if errors.Is(err, io.EOF) {
 				break
 			}
+
 			return fmt.Errorf("recv chunk failed: %w", err)
 		}
 		if err := stream.Send(&pdfapi.PdfExportChunk{Data: chunk.GetChunk()}); err != nil {

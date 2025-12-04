@@ -12,6 +12,7 @@ import (
 
 type AppConfig struct {
 	File     string          `json:"-"`
+	TempDir  string          `json:"tempDir,omitempty"`
 	Consul   *ConsulConfig   `json:"consul,omitempty"`
 	Redis    *RedisConfig    `json:"redis,omitempty"`
 	Database *DatabaseConfig `json:"database,omitempty"`
@@ -59,6 +60,10 @@ func LoadConfig() (*AppConfig, error) {
 func bindFlagsAndEnv() {
 	pflag.String("config_file", "", "Configuration file in JSON format")
 
+	// temp dir
+	pflag.String("temp_dir", "", "Directory for temporary files")
+	_ = viper.BindEnv("temp_dir", "MEDIA_EXPORTER_TEMP_DIR")
+
 	// database
 	pflag.String("data_source", "", "Data source")
 
@@ -87,6 +92,7 @@ func bindFlagsAndEnv() {
 	_ = viper.BindEnv("redis_addr", "REDIS_ADDR")
 	_ = viper.BindEnv("redis_password", "REDIS_PASSWORD")
 	_ = viper.BindEnv("redis_db", "REDIS_DB")
+
 }
 
 func getConfigFilePath() string {
@@ -107,8 +113,14 @@ func loadFromFile(path string) error {
 }
 
 func buildAppConfig(file string) *AppConfig {
+	tempDir := viper.GetString("temp_dir")
+	if tempDir == "" {
+		tempDir = os.TempDir()
+	}
+
 	return &AppConfig{
 		File:     file,
+		TempDir:  tempDir,
 		Database: &DatabaseConfig{Url: viper.GetString("data_source")},
 		Export:   &ExportConfig{Workers: viper.GetInt("workers")},
 		Consul: &ConsulConfig{
