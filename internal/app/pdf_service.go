@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 	pdfapi "github.com/webitel/media-exporter/api/pdf"
@@ -40,17 +40,23 @@ func (s *PdfService) GetPdfExportHistory(ctx context.Context, req *pdfapi.PdfHis
 }
 
 func (s *PdfService) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGenerateRequest) (*pdfapi.PdfExportMetadata, error) {
-	////FIXME remove later
-	//if err := s.app.cache.Clear(); err != nil {
-	//	return nil, fmt.Errorf("failed to clear cache: %w", err)
-	//}
 
 	fileIDsStr := make([]string, len(req.FileIds))
 	for i, id := range req.FileIds {
 		fileIDsStr[i] = fmt.Sprintf("%d", id)
 	}
+	opts, err := options.NewCreateOptions(ctx)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now()
+	fileName := fmt.Sprintf("pdf_ss_%d_%04d-%02d-%02d_%02d_%02d_%02d.pdf",
+		opts.Auth.GetUserId(),
+		now.Year(), now.Month(), now.Day(),
+		now.Hour(), now.Minute(), now.Second(),
+	)
 
-	taskID := fmt.Sprintf("%d:%d:%s:%s", req.AgentId, req.To, req.Channel, strings.Join(fileIDsStr, ","))
+	taskID := fileName
 	slog.InfoContext(ctx, "GeneratePdfExport taskID", "taskID", taskID)
 
 	status, err := s.app.cache.GetExportStatus(taskID)
@@ -66,10 +72,6 @@ func (s *PdfService) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGener
 		return nil, fmt.Errorf("task already in progress: %s", taskID)
 	}
 
-	opts, err := options.NewCreateOptions(ctx)
-	if err != nil {
-		return nil, err
-	}
 	history := &model.NewExportHistory{
 		Name:       fmt.Sprintf("%s.pdf", taskID),
 		Mime:       "application/pdf",
