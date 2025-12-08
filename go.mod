@@ -14,7 +14,7 @@ require (
 	github.com/johnfercher/maroto v1.0.0
 	github.com/mbobakov/grpc-consul-resolver v1.5.3
 	github.com/nicksnyder/go-i18n v1.10.3
-	github.com/redis/go-redis/v9 v9.14.1
+	github.com/redis/go-redis/v9 v9.17.2
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
