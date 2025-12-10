@@ -9,6 +9,8 @@ import (
 	"github.com/webitel/media-exporter/internal/domain/model/options"
 	domain "github.com/webitel/media-exporter/internal/domain/model/pdf"
 	"github.com/webitel/media-exporter/internal/service"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/webitel/media-exporter/internal/errors"
 )
@@ -77,16 +79,15 @@ func ConvertToProtoHistoryResponse(internal *domain.HistoryResponse, limit, offs
 }
 
 func (h *PdfHandler) GetPdfExportHistory(ctx context.Context, req *pdfapi.PdfHistoryRequest) (*pdfapi.PdfHistoryResponse, error) {
-	opts, err := options.NewSearchOptions(ctx)
-	if err != nil {
-		return nil, err
+	if req.AgentId == 0 {
+		return nil, status.Error(codes.InvalidArgument, "AgentId is required")
 	}
 
 	reqOpts := &domain.PdfHistoryRequestOptions{
 		AgentID: req.AgentId,
 	}
 
-	internalResponse, err := h.service.GetHistory(ctx, opts, reqOpts)
+	internalResponse, err := h.service.GetHistory(ctx, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -103,11 +104,13 @@ func (h *PdfHandler) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGener
 	metadata, err := h.service.GenerateExport(
 		ctx,
 		opts,
-		req.AgentId,
-		req.FileIds,
-		int32(req.Channel),
-		req.From,
-		req.To,
+		&domain.GenerateExportRequest{
+			AgentID: req.AgentId,
+			FileIDs: req.FileIds,
+			Channel: int32(req.Channel),
+			From:    req.From,
+			To:      req.To,
+		},
 	)
 	if err != nil {
 		return nil, err
@@ -126,6 +129,9 @@ func (h *PdfHandler) DownloadPdfExport(req *pdfapi.PdfDownloadRequest, stream pd
 }
 
 func (h *PdfHandler) DeletePdfExportRecord(ctx context.Context, req *pdfapi.DeletePdfExportRecordRequest) (*pdfapi.DeletePdfExportRecordResponse, error) {
+	if req.Id == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Id is required")
+	}
 	opts, err := options.NewDeleteOptions(ctx, []int64{req.Id})
 	if err != nil {
 		return nil, err

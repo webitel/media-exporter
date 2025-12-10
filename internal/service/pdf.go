@@ -9,16 +9,16 @@ import (
 	"github.com/redis/go-redis/v9"
 	pdfapi "github.com/webitel/media-exporter/api/pdf"
 	"github.com/webitel/media-exporter/internal/cache"
-	options2 "github.com/webitel/media-exporter/internal/domain/model/options"
+	"github.com/webitel/media-exporter/internal/domain/model/options"
 	domain "github.com/webitel/media-exporter/internal/domain/model/pdf"
 	"github.com/webitel/media-exporter/internal/errors"
 	"github.com/webitel/media-exporter/internal/store"
 )
 
 type PdfService interface {
-	GetHistory(ctx context.Context, opts *options2.SearchOptions, reqOpts *domain.PdfHistoryRequestOptions) (*domain.HistoryResponse, error)
-	GenerateExport(ctx context.Context, opts *options2.CreateOptions, agentID int64, fileIDs []int64, channel int32, from, to int64) (*domain.PdfExportMetadata, error)
-	DeleteRecord(ctx context.Context, opts *options2.DeleteOptions, recordID int64) error
+	GetHistory(ctx context.Context, reqOpts *domain.PdfHistoryRequestOptions) (*domain.HistoryResponse, error)
+	GenerateExport(ctx context.Context, opts *options.CreateOptions, req *domain.GenerateExportRequest) (*domain.PdfExportMetadata, error)
+	DeleteRecord(ctx context.Context, opts *options.DeleteOptions, recordID int64) error
 }
 
 type PdfServiceImpl struct {
@@ -34,30 +34,27 @@ func NewPdfService(s store.PdfStore, c cache.Cache, log *slog.Logger) (PdfServic
 	return &PdfServiceImpl{store: s, cache: c, log: log}, nil
 }
 
-func (s *PdfServiceImpl) GetHistory(ctx context.Context, opts *options2.SearchOptions, reqOpts *domain.PdfHistoryRequestOptions) (*domain.HistoryResponse, error) {
-	if reqOpts.AgentID == 0 {
+func (s *PdfServiceImpl) GetHistory(ctx context.Context, req *domain.PdfHistoryRequestOptions) (*domain.HistoryResponse, error) {
+	if req.AgentID == 0 {
 		return nil, fmt.Errorf("agent_id is required")
 	}
 
-	return s.store.GetPdfExportHistory(opts, reqOpts)
+	return s.store.GetPdfExportHistory(req)
 }
 
 func (s *PdfServiceImpl) GenerateExport(
 	ctx context.Context,
-	opts *options2.CreateOptions,
-	agentID int64,
-	fileIDs []int64,
-	channel int32,
-	from, to int64,
+	opts *options.CreateOptions,
+	req *domain.GenerateExportRequest,
 ) (*domain.PdfExportMetadata, error) {
-	if agentID == 0 {
+	if req.AgentID == 0 {
 		return nil, fmt.Errorf("agent_id is required")
 	}
 
 	now := time.Now()
 
 	var channelStr domain.ExportChannel
-	switch channel {
+	switch req.Channel {
 	case int32(pdfapi.PdfChannel_CALL):
 		channelStr = domain.ChannelCall
 	case int32(pdfapi.PdfChannel_SCREENRECORDING):
@@ -95,7 +92,7 @@ func (s *PdfServiceImpl) GenerateExport(
 		UploadedAt: opts.Time.UnixMilli(),
 		UploadedBy: opts.Auth.GetUserId(),
 		Status:     "pending",
-		AgentID:    agentID,
+		AgentID:    req.AgentID,
 	}
 	historyID, err := s.store.InsertPdfExportHistory(opts, history)
 	if err != nil {
@@ -108,14 +105,14 @@ func (s *PdfServiceImpl) GenerateExport(
 
 	task := domain.ExportTask{
 		TaskID:   taskID,
-		AgentID:  agentID,
+		AgentID:  req.AgentID,
 		UserID:   opts.Auth.GetUserId(),
 		DomainID: opts.Auth.GetDomainId(),
 		Channel:  string(channelStr),
-		From:     from,
-		To:       to,
+		From:     req.From,
+		To:       req.To,
 		Headers:  domain.ExtractHeadersFromContext(ctx, []string{"authorization", "x-req-id", "x-webitel-access"}),
-		IDs:      fileIDs,
+		IDs:      req.FileIDs,
 		Type:     domain.PdfExportType,
 	}
 
@@ -135,7 +132,7 @@ func (s *PdfServiceImpl) GenerateExport(
 	}, nil
 }
 
-func (s *PdfServiceImpl) DeleteRecord(ctx context.Context, opts *options2.DeleteOptions, recordID int64) error {
+func (s *PdfServiceImpl) DeleteRecord(ctx context.Context, opts *options.DeleteOptions, recordID int64) error {
 	if recordID == 0 {
 		return fmt.Errorf("id is required for delete operation")
 	}

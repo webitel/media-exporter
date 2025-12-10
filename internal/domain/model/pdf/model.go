@@ -16,6 +16,13 @@ const (
 	ChannelUnknown         ExportChannel = "unknown"
 )
 
+type GenerateExportRequest struct {
+	AgentID  int64
+	FileIDs  []int64
+	Channel  int32
+	From, To int64
+}
+
 type ExportHistory struct {
 	ID         int64        `db:"id"`
 	Name       string       `db:"name"`

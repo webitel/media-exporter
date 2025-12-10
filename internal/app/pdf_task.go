@@ -8,14 +8,14 @@ import (
 	"time"
 
 	"github.com/webitel/media-exporter/api/storage"
-	model2 "github.com/webitel/media-exporter/internal/domain/model"
+	"github.com/webitel/media-exporter/internal/domain/model"
 	domain "github.com/webitel/media-exporter/internal/domain/model/pdf"
 	"github.com/webitel/media-exporter/internal/util"
 	"github.com/webitel/media-exporter/internal/util/pdf/maroto"
 	"github.com/webitel/storage/gen/engine"
 )
 
-func (app *App) HandlePdfTask(ctx context.Context, session *model2.Session, task domain.ExportTask) error {
+func (app *App) HandlePdfTask(ctx context.Context, session *model.Session, task domain.ExportTask) error {
 	historyID, err := app.Cache.GetExportHistoryID(task.TaskID)
 	if err != nil {
 

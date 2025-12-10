@@ -27,7 +27,6 @@ func RegisterServices(grpcServer *grpc.Server, appInstance *App) {
 	services := []serviceRegistration{
 		{
 			init: func(a *App) (any, error) {
-
 				pdfService, err := service.NewPdfService(
 					a.Store.Pdf(),
 					a.Cache,

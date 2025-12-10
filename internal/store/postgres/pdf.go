@@ -20,7 +20,7 @@ type Pdf struct {
 	storage *Store
 }
 
-func (m *Pdf) GetPdfExportHistory(opts *options.SearchOptions, req *domain.PdfHistoryRequestOptions) (*domain.HistoryResponse, error) {
+func (m *Pdf) GetPdfExportHistory(req *domain.PdfHistoryRequestOptions) (*domain.HistoryResponse, error) {
 	db, err := m.storage.Database()
 	if err != nil {
 		return nil, dberr.NewDBInternalError("get_pdf_export_history", err)
