@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	PdfService_GeneratePdfExport_FullMethodName   = "/webitel_media_exporter.PdfService/GeneratePdfExport"
-	PdfService_DownloadPdfExport_FullMethodName   = "/webitel_media_exporter.PdfService/DownloadPdfExport"
-	PdfService_GetPdfExportHistory_FullMethodName = "/webitel_media_exporter.PdfService/GetPdfExportHistory"
+	PdfService_GeneratePdfExport_FullMethodName     = "/webitel_media_exporter.PdfService/GeneratePdfExport"
+	PdfService_DownloadPdfExport_FullMethodName     = "/webitel_media_exporter.PdfService/DownloadPdfExport"
+	PdfService_GetPdfExportHistory_FullMethodName   = "/webitel_media_exporter.PdfService/GetPdfExportHistory"
+	PdfService_DeletePdfExportRecord_FullMethodName = "/webitel_media_exporter.PdfService/DeletePdfExportRecord"
 )
 
 // PdfServiceClient is the client API for PdfService service.
@@ -38,6 +39,7 @@ type PdfServiceClient interface {
 	DownloadPdfExport(ctx context.Context, in *PdfDownloadRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[PdfExportChunk], error)
 	// Get paginated history of PDF exports for a given agent.
 	GetPdfExportHistory(ctx context.Context, in *PdfHistoryRequest, opts ...grpc.CallOption) (*PdfHistoryResponse, error)
+	DeletePdfExportRecord(ctx context.Context, in *DeletePdfExportRecordRequest, opts ...grpc.CallOption) (*DeletePdfExportRecordResponse, error)
 }
 
 type pdfServiceClient struct {
@@ -87,6 +89,16 @@ func (c *pdfServiceClient) GetPdfExportHistory(ctx context.Context, in *PdfHisto
 	return out, nil
 }
 
+func (c *pdfServiceClient) DeletePdfExportRecord(ctx context.Context, in *DeletePdfExportRecordRequest, opts ...grpc.CallOption) (*DeletePdfExportRecordResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeletePdfExportRecordResponse)
+	err := c.cc.Invoke(ctx, PdfService_DeletePdfExportRecord_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PdfServiceServer is the server API for PdfService service.
 // All implementations must embed UnimplementedPdfServiceServer
 // for forward compatibility.
@@ -101,6 +113,7 @@ type PdfServiceServer interface {
 	DownloadPdfExport(*PdfDownloadRequest, grpc.ServerStreamingServer[PdfExportChunk]) error
 	// Get paginated history of PDF exports for a given agent.
 	GetPdfExportHistory(context.Context, *PdfHistoryRequest) (*PdfHistoryResponse, error)
+	DeletePdfExportRecord(context.Context, *DeletePdfExportRecordRequest) (*DeletePdfExportRecordResponse, error)
 	mustEmbedUnimplementedPdfServiceServer()
 }
 
@@ -119,6 +132,9 @@ func (UnimplementedPdfServiceServer) DownloadPdfExport(*PdfDownloadRequest, grpc
 }
 func (UnimplementedPdfServiceServer) GetPdfExportHistory(context.Context, *PdfHistoryRequest) (*PdfHistoryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetPdfExportHistory not implemented")
+}
+func (UnimplementedPdfServiceServer) DeletePdfExportRecord(context.Context, *DeletePdfExportRecordRequest) (*DeletePdfExportRecordResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeletePdfExportRecord not implemented")
 }
 func (UnimplementedPdfServiceServer) mustEmbedUnimplementedPdfServiceServer() {}
 func (UnimplementedPdfServiceServer) testEmbeddedByValue()                    {}
@@ -188,6 +204,24 @@ func _PdfService_GetPdfExportHistory_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PdfService_DeletePdfExportRecord_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeletePdfExportRecordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PdfServiceServer).DeletePdfExportRecord(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PdfService_DeletePdfExportRecord_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PdfServiceServer).DeletePdfExportRecord(ctx, req.(*DeletePdfExportRecordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PdfService_ServiceDesc is the grpc.ServiceDesc for PdfService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -202,6 +236,10 @@ var PdfService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetPdfExportHistory",
 			Handler:    _PdfService_GetPdfExportHistory_Handler,
+		},
+		{
+			MethodName: "DeletePdfExportRecord",
+			Handler:    _PdfService_DeletePdfExportRecord_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
