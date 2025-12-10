@@ -19,15 +19,15 @@ import (
 )
 
 type App struct {
-	config         *cfg.AppConfig
+	Config         *cfg.AppConfig
 	log            *slog.Logger
 	exitCh         chan error
 	shutdown       func(ctx context.Context) error
 	Store          store.Store
 	sessionManager auth.Manager
-	cache          *cache.RedisCache
+	Cache          *cache.RedisCache
 	server         *server.Server
-	storageClient  storage.FileServiceClient
+	StorageClient  storage.FileServiceClient
 
 	// gRPC connections
 	storageConn    *grpc.ClientConn
@@ -37,7 +37,7 @@ type App struct {
 // New creates a fully initialized App.
 func New(config *cfg.AppConfig, shutdown func(ctx context.Context) error) (*App, error) {
 	app := &App{
-		config:   config,
+		Config:   config,
 		shutdown: shutdown,
 		exitCh:   make(chan error),
 	}
@@ -67,19 +67,19 @@ func New(config *cfg.AppConfig, shutdown func(ctx context.Context) error) (*App,
 // --------- Private init methods ---------
 
 func (app *App) initStore() error {
-	if app.config.Database == nil {
+	if app.Config.Database == nil {
 		return errors.New("database config is nil")
 	}
-	app.Store = postgres.New(app.config.Database)
+	app.Store = postgres.New(app.Config.Database)
 	return nil
 }
 
 func (app *App) initRedis() error {
-	redisCache, err := cache.NewRedisCache(app.config.Redis.Addr, app.config.Redis.Password, app.config.Redis.DB)
+	redisCache, err := cache.NewRedisCache(app.Config.Redis.Addr, app.Config.Redis.Password, app.Config.Redis.DB)
 	if err != nil {
 		return errors.New("unable to initialize Redis", errors.WithCause(err))
 	}
-	app.cache = redisCache
+	app.Cache = redisCache
 	return nil
 }
 
@@ -87,17 +87,17 @@ func (app *App) initGRPCClients() error {
 	var err error
 
 	app.storageConn, err = grpc.NewClient(
-		fmt.Sprintf("consul://%s/storage?wait=14s", app.config.Consul.Address),
+		fmt.Sprintf("consul://%s/storage?wait=14s", app.Config.Consul.Address),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy": "round_robin"}`),
 	)
 	if err != nil {
 		return errors.New("unable to create storage client", errors.WithCause(err))
 	}
-	app.storageClient = storage.NewFileServiceClient(app.storageConn)
+	app.StorageClient = storage.NewFileServiceClient(app.storageConn)
 
 	app.webitelAppConn, err = grpc.NewClient(
-		fmt.Sprintf("consul://%s/go.webitel.app?wait=14s", app.config.Consul.Address),
+		fmt.Sprintf("consul://%s/go.webitel.app?wait=14s", app.Config.Consul.Address),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy": "round_robin"}`),
 	)
@@ -117,7 +117,7 @@ func (app *App) initSessionManager() error {
 }
 
 func (app *App) initServer() error {
-	srv, err := server.BuildServer(app.config.Consul, app.sessionManager, app.exitCh)
+	srv, err := server.BuildServer(app.Config.Consul, app.sessionManager, app.exitCh)
 	if err != nil {
 		return errors.New("failed to build server", errors.WithCause(err))
 	}
@@ -161,11 +161,11 @@ func (app *App) Stop() error {
 		}
 	}
 
-	if app.cache != nil {
-		if err := app.cache.Clear(); err != nil {
-			slog.Error("redis cache clear error", "err", err)
+	if app.Cache != nil {
+		if err := app.Cache.Clear(); err != nil {
+			slog.Error("redis Cache clear error", "err", err)
 		} else {
-			slog.Info("redis cache cleared")
+			slog.Info("redis Cache cleared")
 		}
 	}
 

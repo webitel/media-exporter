@@ -9,10 +9,10 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgconn"
-	pdfapi "github.com/webitel/media-exporter/api/pdf"
+	"github.com/webitel/media-exporter/internal/domain/model/options"
+
+	domain "github.com/webitel/media-exporter/internal/domain/model/pdf"
 	dberr "github.com/webitel/media-exporter/internal/errors"
-	"github.com/webitel/media-exporter/internal/model"
-	"github.com/webitel/media-exporter/internal/model/options"
 	"github.com/webitel/media-exporter/internal/store"
 )
 
@@ -20,13 +20,13 @@ type Pdf struct {
 	storage *Store
 }
 
-func (m *Pdf) GetPdfExportHistory(opts *options.SearchOptions, req *pdfapi.PdfHistoryRequest) (*pdfapi.PdfHistoryResponse, error) {
+func (m *Pdf) GetPdfExportHistory(opts *options.SearchOptions, req *domain.PdfHistoryRequestOptions) (*domain.HistoryResponse, error) {
 	db, err := m.storage.Database()
 	if err != nil {
 		return nil, dberr.NewDBInternalError("get_pdf_export_history", err)
 	}
 
-	// Page & size
+	// Total & size
 	page := int64(req.Page)
 	if page < 1 {
 		page = 1
@@ -55,8 +55,7 @@ func (m *Pdf) GetPdfExportHistory(opts *options.SearchOptions, req *pdfapi.PdfHi
 			"status",
 		).
 		From("media_exporter.pdf_export_history").
-		Where(sq.Eq{"agent_id": req.AgentId}).
-		//Where(sq.Eq{"uploaded_by": opts.Auth.GetUserId()}).
+		Where(sq.Eq{"agent_id": req.AgentID}).
 		OrderBy("uploaded_at DESC").
 		Offset(uint64(offset)).
 		Limit(uint64(limit))
@@ -72,10 +71,12 @@ func (m *Pdf) GetPdfExportHistory(opts *options.SearchOptions, req *pdfapi.PdfHi
 	}
 	defer rows.Close()
 
-	var records []*pdfapi.PdfHistoryRecord
+	// Проміжний зріз для сканування (відповідає стовпцям БД)
+	var scannedRecords []*domain.ExportHistory
 	for rows.Next() {
-		var record model.ExportHistory
+		var record domain.ExportHistory
 		var fileID sql.NullInt64
+
 		err := rows.Scan(
 			&record.ID,
 			&record.Name,
@@ -97,53 +98,42 @@ func (m *Pdf) GetPdfExportHistory(opts *options.SearchOptions, req *pdfapi.PdfHi
 			record.FileID = 0
 		}
 
-		records = append(records, &pdfapi.PdfHistoryRecord{
-			Id:        record.ID,
-			Name:      record.Name,
-			FileId:    record.FileID,
-			MimeType:  record.Mime,
-			CreatedAt: record.UploadedAt,
-			UpdatedAt: record.UpdatedAt,
-			CreatedBy: record.UploadedBy,
-			UpdatedBy: record.UpdatedBy,
-			Status:    mapStatusToProto(string(record.Status)),
-		})
+		scannedRecords = append(scannedRecords, &record)
 	}
 
 	if err = rows.Err(); err != nil {
 		return nil, dberr.NewDBInternalError("get_pdf_export_history", err)
 	}
 
-	// Check has_next
 	hasNext := false
-	if int64(len(records)) > size {
+	if int64(len(scannedRecords)) > size {
 		hasNext = true
-		records = records[:len(records)-1] // drop the extra record
+		scannedRecords = scannedRecords[:len(scannedRecords)-1] // drop the extra record
 	}
 
-	return &pdfapi.PdfHistoryResponse{
-		Page: int32(page),
-		Next: hasNext,
-		Data: records,
+	finalRecords := make([]*domain.HistoryRecord, len(scannedRecords))
+	for i, rec := range scannedRecords {
+		finalRecords[i] = &domain.HistoryRecord{
+			ID:        rec.ID,
+			Name:      rec.Name,
+			FileID:    rec.FileID,
+			MimeType:  rec.Mime,
+			CreatedAt: rec.UploadedAt,
+			UpdatedAt: rec.UpdatedAt,
+			CreatedBy: rec.UploadedBy,
+			UpdatedBy: rec.UpdatedBy,
+			Status:    string(rec.Status),
+		}
+	}
+
+	return &domain.HistoryResponse{
+		Next:  hasNext,
+		Data:  finalRecords,
+		Total: int64(len(finalRecords)) + offset,
 	}, nil
 }
 
-func mapStatusToProto(status string) pdfapi.PdfExportStatus {
-	switch status {
-	case "pending":
-		return pdfapi.PdfExportStatus_PDF_EXPORT_STATUS_PENDING
-	case "processing":
-		return pdfapi.PdfExportStatus_PDF_EXPORT_STATUS_PROCESSING
-	case "done":
-		return pdfapi.PdfExportStatus_PDF_EXPORT_STATUS_DONE
-	case "failed":
-		return pdfapi.PdfExportStatus_PDF_EXPORT_STATUS_FAILED
-	default:
-		return pdfapi.PdfExportStatus_PDF_EXPORT_STATUS_UNSPECIFIED
-	}
-}
-
-func (m *Pdf) InsertPdfExportHistory(opts *options.CreateOptions, input *model.NewExportHistory) (int64, error) {
+func (m *Pdf) InsertPdfExportHistory(opts *options.CreateOptions, input *domain.NewExportHistory) (int64, error) {
 	db, err := m.storage.Database()
 	if err != nil {
 		return 0, dberr.NewDBInternalError("insert_pdf_export_history", err)
@@ -193,7 +183,7 @@ func (m *Pdf) InsertPdfExportHistory(opts *options.CreateOptions, input *model.N
 	return id, nil
 }
 
-func (m *Pdf) UpdatePdfExportStatus(input *model.UpdateExportStatus) error {
+func (m *Pdf) UpdatePdfExportStatus(input *domain.UpdateExportStatus) error {
 	db, err := m.storage.Database()
 	if err != nil {
 		return dberr.NewDBInternalError("update_pdf_export_status", err)
@@ -228,7 +218,7 @@ func (m *Pdf) UpdatePdfExportStatus(input *model.UpdateExportStatus) error {
 	return nil
 }
 
-func (m *Pdf) DeletePdfExportRecord(opts *options.DeleteOptions, request *pdfapi.DeletePdfExportRecordRequest) error {
+func (m *Pdf) DeletePdfExportRecord(opts *options.DeleteOptions, recordID int64) error {
 	db, err := m.storage.Database()
 	if err != nil {
 		return dberr.NewDBInternalError("delete_pdf_export_record", err)
@@ -236,12 +226,12 @@ func (m *Pdf) DeletePdfExportRecord(opts *options.DeleteOptions, request *pdfapi
 
 	query := `DELETE FROM media_exporter.pdf_export_history WHERE id = $1 AND dc = $2`
 
-	cmd, err := db.Exec(opts.Context, query, request.Id, opts.Auth.GetDomainId())
+	cmd, err := db.Exec(opts.Context, query, recordID, opts.Auth.GetDomainId())
 	if err != nil {
 		return dberr.NewDBInternalError("delete_pdf_export_record", err)
 	}
 	if cmd.RowsAffected() == 0 {
-		return fmt.Errorf("no export history record found for id=%d", request.Id)
+		return fmt.Errorf("no export history record found for id=%d", recordID)
 	}
 	return nil
 }
