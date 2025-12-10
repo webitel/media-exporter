@@ -65,6 +65,17 @@ var WebitelAPI = WebitelServicesInfo{
 					},
 				},
 			},
+			"DeletePdfExportRecord": WebitelMethod{
+				Access: 0,
+				Input:  "DeletePdfExportRecordRequest",
+				Output: "DeletePdfExportRecordResponse",
+				HttpBindings: []*HttpBinding{
+					{
+						Path:   "/export/pdf/history/{id}",
+						Method: "DELETE",
+					},
+				},
+			},
 		},
 	},
 }

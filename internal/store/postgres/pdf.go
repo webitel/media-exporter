@@ -143,7 +143,7 @@ func mapStatusToProto(status string) pdfapi.PdfExportStatus {
 	}
 }
 
-func (m *Pdf) InsertPdfExportHistory(input *model.NewExportHistory) (int64, error) {
+func (m *Pdf) InsertPdfExportHistory(opts *options.CreateOptions, input *model.NewExportHistory) (int64, error) {
 	db, err := m.storage.Database()
 	if err != nil {
 		return 0, dberr.NewDBInternalError("insert_pdf_export_history", err)
@@ -151,8 +151,8 @@ func (m *Pdf) InsertPdfExportHistory(input *model.NewExportHistory) (int64, erro
 
 	query := `
 		INSERT INTO media_exporter.pdf_export_history
-			(name, file_id, mime, uploaded_at, updated_at, uploaded_by, status, agent_id)
-		VALUES ($1, $2, $3, $4, $4, $5, $6, $7)
+			(name, file_id, mime, uploaded_at, updated_at, uploaded_by, status, agent_id, dc)
+		VALUES ($1, $2, $3, $4, $4, $5, $6, $7, $8)
 		RETURNING id
 	`
 
@@ -167,6 +167,7 @@ func (m *Pdf) InsertPdfExportHistory(input *model.NewExportHistory) (int64, erro
 		input.UploadedBy,
 		input.Status,
 		input.AgentID,
+		opts.Auth.GetDomainId(),
 	).Scan(&id)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -224,6 +225,24 @@ func (m *Pdf) UpdatePdfExportStatus(input *model.UpdateExportStatus) error {
 			fmt.Sprintf("no export history record found for id=%d", input.ID))
 	}
 
+	return nil
+}
+
+func (m *Pdf) DeletePdfExportRecord(opts *options.DeleteOptions, request *pdfapi.DeletePdfExportRecordRequest) error {
+	db, err := m.storage.Database()
+	if err != nil {
+		return dberr.NewDBInternalError("delete_pdf_export_record", err)
+	}
+
+	query := `DELETE FROM media_exporter.pdf_export_history WHERE id = $1 AND dc = $2`
+
+	cmd, err := db.Exec(opts.Context, query, request.Id, opts.Auth.GetDomainId())
+	if err != nil {
+		return dberr.NewDBInternalError("delete_pdf_export_record", err)
+	}
+	if cmd.RowsAffected() == 0 {
+		return fmt.Errorf("no export history record found for id=%d", request.Id)
+	}
 	return nil
 }
 

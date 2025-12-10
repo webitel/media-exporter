@@ -15,7 +15,8 @@ type Store interface {
 }
 
 type PdfStore interface {
-	InsertPdfExportHistory(input *model.NewExportHistory) (int64, error)
+	InsertPdfExportHistory(opts *options.CreateOptions, input *model.NewExportHistory) (int64, error)
 	UpdatePdfExportStatus(input *model.UpdateExportStatus) error
 	GetPdfExportHistory(opts *options.SearchOptions, request *pdfapi.PdfHistoryRequest) (*pdfapi.PdfHistoryResponse, error)
+	DeletePdfExportRecord(opts *options.DeleteOptions, request *pdfapi.DeletePdfExportRecordRequest) error
 }

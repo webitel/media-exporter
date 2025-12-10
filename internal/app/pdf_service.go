@@ -77,7 +77,7 @@ func (s *PdfService) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGener
 		)
 	}
 
-	taskID = fileName // використовуємо fileName як taskID
+	taskID = fileName
 	slog.InfoContext(ctx, "GeneratePdfExport taskID", "taskID", taskID)
 
 	status, err := s.app.cache.GetExportStatus(taskID)
@@ -101,7 +101,7 @@ func (s *PdfService) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGener
 		Status:     "pending",
 		AgentID:    req.AgentId,
 	}
-	historyID, err := s.app.Store.Pdf().InsertPdfExportHistory(history)
+	historyID, err := s.app.Store.Pdf().InsertPdfExportHistory(opts, history)
 	if err != nil {
 
 		return nil, fmt.Errorf("insert history failed: %w", err)
@@ -143,4 +143,21 @@ func (s *PdfService) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGener
 
 func (s *PdfService) DownloadPdfExport(req *pdfapi.PdfDownloadRequest, stream pdfapi.PdfService_DownloadPdfExportServer) error {
 	return streamDownloadFile(stream.Context(), s.app.storageClient, req, stream)
+}
+
+func (s *PdfService) DeletePdfExportRecord(ctx context.Context, req *pdfapi.DeletePdfExportRecordRequest) (*pdfapi.DeletePdfExportRecordResponse, error) {
+	if req.Id == 0 {
+		return nil, fmt.Errorf("id is required for delete operation")
+	}
+
+	opts, err := options.NewDeleteOptions(ctx, []int64{req.Id})
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.app.Store.Pdf().DeletePdfExportRecord(opts, req)
+	if err != nil {
+		return nil, err
+	}
+	return &pdfapi.DeletePdfExportRecordResponse{Id: req.Id}, nil
 }
