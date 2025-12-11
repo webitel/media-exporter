@@ -25,12 +25,12 @@ func extractHeadersFromContext(ctx context.Context, keys []string) map[string]st
 	return headers
 }
 
-func parseChannel(channel string) (storage.UploadFileChannel, error) {
+func parseChannel(channel string) (storage.ScreenrecordingType, error) {
 	switch channel {
 	case "call":
-		return storage.UploadFileChannel_CallChannel, nil
+		return storage.ScreenrecordingType_SCREENSHOT, nil
 	case "screenrecording":
-		return storage.UploadFileChannel_ScreenRecordingChannel, nil
+		return storage.ScreenrecordingType_SCREENSHOT, nil
 	default:
 		return 0, fmt.Errorf("invalid channel: %v", channel)
 	}

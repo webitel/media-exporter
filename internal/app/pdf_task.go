@@ -36,8 +36,8 @@ func handlePdfTask(ctx context.Context, session *model.Session, app *App, task m
 	ctx = contextWithHeaders(task.Headers)
 
 	filesResp, err := app.storageClient.SearchScreenRecordings(ctx, &storage.SearchScreenRecordingsRequest{
-		Id:      task.IDs,
-		Channel: enumChannel,
+		Id:   task.IDs,
+		Type: enumChannel,
 		UploadedAt: &engine.FilterBetween{
 			From: task.From,
 			To:   task.To,

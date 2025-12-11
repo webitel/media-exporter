@@ -40,10 +40,6 @@ func uploadPDFToStorage(ctx context.Context, session *model.Session, app *App, f
 }
 
 func sendFileMetadata(stream storage.FileService_UploadFileClient, session *model.Session, task model.ExportTask) error {
-	chEnum, err := parseChannel(task.Channel)
-	if err != nil {
-		return err
-	}
 	return stream.Send(&storage.UploadFileRequest{
 		Data: &storage.UploadFileRequest_Metadata_{
 			Metadata: &storage.UploadFileRequest_Metadata{
@@ -51,7 +47,7 @@ func sendFileMetadata(stream storage.FileService_UploadFileClient, session *mode
 				MimeType:       "application/pdf",
 				Uuid:           task.TaskID,
 				StreamResponse: true,
-				Channel:        chEnum,
+				Channel:        storage.UploadFileChannel_ScreenRecordingChannel,
 				UploadedBy:     session.UserID(),
 				DomainId:       session.DomainID(),
 				CreatedAt:      time.Now().UnixMilli(),
