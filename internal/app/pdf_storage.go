@@ -11,7 +11,6 @@ import (
 	"github.com/webitel/media-exporter/api/storage"
 	model2 "github.com/webitel/media-exporter/internal/domain/model"
 	domain "github.com/webitel/media-exporter/internal/domain/model/pdf"
-	"github.com/webitel/media-exporter/internal/util"
 )
 
 func uploadPDFToStorage(ctx context.Context, session *model2.Session, app *App, filePath string, task domain.ExportTask) (*storage.UploadFileResponse, error) {
@@ -42,7 +41,7 @@ func uploadPDFToStorage(ctx context.Context, session *model2.Session, app *App, 
 }
 
 func sendFileMetadata(stream storage.FileService_UploadFileClient, session *model2.Session, task domain.ExportTask) error {
-	chEnum, err := util.ParseChannel(task.Channel)
+	channel, err := ParseUploadFileChannel(task.Channel)
 	if err != nil {
 		return err
 	}
@@ -53,13 +52,24 @@ func sendFileMetadata(stream storage.FileService_UploadFileClient, session *mode
 				MimeType:       "application/pdf",
 				Uuid:           task.TaskID,
 				StreamResponse: true,
-				Channel:        chEnum,
+				Channel:        channel,
 				UploadedBy:     session.UserID(),
 				DomainId:       session.DomainID(),
 				CreatedAt:      time.Now().UnixMilli(),
 			},
 		},
 	})
+}
+
+func ParseUploadFileChannel(channel string) (storage.UploadFileChannel, error) {
+	switch channel {
+	case "call":
+		return storage.UploadFileChannel_ScreenRecordingChannel, nil
+	case "screenrecording":
+		return storage.UploadFileChannel_ScreenRecordingChannel, nil
+	default:
+		return 0, fmt.Errorf("invalid channel: %v", channel)
+	}
 }
 
 func sendFileChunks(stream storage.FileService_UploadFileClient, f *os.File) error {

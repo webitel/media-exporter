@@ -93,6 +93,7 @@ func (s *PdfServiceImpl) GenerateExport(
 		UploadedBy: opts.Auth.GetUserId(),
 		Status:     "pending",
 		AgentID:    req.AgentID,
+		FileID:     req.FileIDs[0],
 	}
 	historyID, err := s.store.InsertPdfExportHistory(opts, history)
 	if err != nil {
@@ -119,6 +120,9 @@ func (s *PdfServiceImpl) GenerateExport(
 	if err := s.cache.PushExportTask(task); err != nil {
 		return nil, fmt.Errorf("push task failed: %w", err)
 	}
+
+	// >>> ADD LOG HERE <<<
+	s.log.InfoContext(ctx, "PUSHED TASK TO REDIS QUEUE", "taskID", taskID)
 
 	if err := s.cache.SetExportStatus(taskID, "pending"); err != nil {
 		return nil, fmt.Errorf("cache set status failed: %w", err)

@@ -27,7 +27,7 @@ func (app *App) HandlePdfTask(ctx context.Context, session *model.Session, task 
 		return fmt.Errorf("failed to set processing status: %w", err)
 	}
 
-	enumChannel, err := util.ParseChannel(task.Channel)
+	channel, err := ParseChannel(task.Channel)
 	if err != nil {
 		_ = SetTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
 		return fmt.Errorf("failed to parse channel: %w", err)
@@ -36,8 +36,8 @@ func (app *App) HandlePdfTask(ctx context.Context, session *model.Session, task 
 	ctx = util.ContextWithHeaders(task.Headers)
 
 	filesResp, err := app.StorageClient.SearchScreenRecordings(ctx, &storage.SearchScreenRecordingsRequest{
-		Id:      task.IDs,
-		Channel: enumChannel,
+		Id:   task.IDs,
+		Type: channel,
 		UploadedAt: &engine.FilterBetween{
 			From: task.From,
 			To:   task.To,
@@ -117,6 +117,17 @@ func (app *App) HandlePdfTask(ctx context.Context, session *model.Session, task 
 	slog.InfoContext(ctx, "PDF task completed successfully", "taskID", task.TaskID, "fileID", res.FileId)
 
 	return nil
+}
+
+func ParseChannel(channel string) (storage.ScreenrecordingType, error) {
+	switch channel {
+	case "call":
+		return storage.ScreenrecordingType_SCREENSHOT, nil
+	case "screenrecording":
+		return storage.ScreenrecordingType_SCREENSHOT, nil
+	default:
+		return 0, fmt.Errorf("invalid channel: %v", channel)
+	}
 }
 
 func SetTaskStatus(app *App, historyID int64, taskID, status string, updatedBy int64, fileID *int64) error {

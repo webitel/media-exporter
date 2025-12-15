@@ -14,17 +14,6 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-func ParseChannel(channel string) (storage.UploadFileChannel, error) {
-	switch channel {
-	case "call":
-		return storage.UploadFileChannel_CallChannel, nil
-	case "screenrecording":
-		return storage.UploadFileChannel_ScreenRecordingChannel, nil
-	default:
-		return 0, fmt.Errorf("invalid channel: %v", channel)
-	}
-}
-
 func IsValidImageMime(mime string) bool {
 	switch mime {
 	case "image/png", "image/jpeg", "image/jpg", "image/gif", "image/bmp":

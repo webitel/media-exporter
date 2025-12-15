@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -56,18 +57,18 @@ func (r *RedisCache) PushExportTask(task domain.ExportTask) error {
 // cache/redis.go
 
 func (r *RedisCache) PopExportTask() (domain.ExportTask, error) {
-
 	result, err := r.client.BRPop(context.Background(), 5*time.Second, exportQueueKey).Result()
 
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
-
 			return domain.ExportTask{}, fmt.Errorf("queue empty (timeout)")
 		}
+		slog.Error("REDIS BRPOP ERROR", "err", err)
 		return domain.ExportTask{}, err
 	}
 
 	if len(result) < 2 {
+		slog.Warn("BRPOP BAD FORMAT", "result", result)
 		return domain.ExportTask{}, fmt.Errorf("unexpected BRPop result format")
 	}
 
@@ -75,8 +76,12 @@ func (r *RedisCache) PopExportTask() (domain.ExportTask, error) {
 
 	var task domain.ExportTask
 	if err := json.Unmarshal(data, &task); err != nil {
+		slog.Error("BRPOP UNMARSHAL ERROR", "err", err)
 		return domain.ExportTask{}, fmt.Errorf("failed to unmarshal task: %w", err)
 	}
+
+	slog.Info("POPED TASK FROM REDIS QUEUE", "taskID", task.TaskID)
+
 	return task, nil
 }
 
