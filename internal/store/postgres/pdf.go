@@ -44,20 +44,25 @@ func (m *Pdf) GetPdfExportHistory(opts *options.SearchOptions, req *pdfapi.PdfHi
 
 	query := psql.
 		Select(
-			"id",
-			"name",
-			"file_id",
-			"mime",
-			"uploaded_at",
-			"updated_at",
-			"uploaded_by",
-			"updated_by",
-			"status",
+			"h.id",
+			"h.name",
+			"h.file_id",
+			"h.mime",
+			"h.uploaded_at",
+			"h.updated_at",
+			"h.uploaded_by",
+			"h.updated_by",
+			"h.status",
 		).
-		From("media_exporter.pdf_export_history").
-		Where(sq.Eq{"agent_id": req.AgentId}).
-		//Where(sq.Eq{"uploaded_by": opts.Auth.GetUserId()}).
-		OrderBy("uploaded_at DESC").
+		From("media_exporter.pdf_export_history h").
+		Where(sq.And{
+			sq.Eq{"h.agent_id": req.AgentId},
+			sq.Or{
+				sq.Eq{"h.file_id": nil},
+				sq.Expr("EXISTS (SELECT 1 FROM storage.files f WHERE f.id = h.file_id AND f.removed IS null)"),
+			},
+		}).
+		OrderBy("h.uploaded_at DESC").
 		Offset(uint64(offset)).
 		Limit(uint64(limit))
 
