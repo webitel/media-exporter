@@ -36,7 +36,7 @@ package drafts
 //	return &PdfService{app: app}, nil
 //}
 //
-//func (m *PdfService) GetPdfExportHistory(ctx context.Context, req *pdfapi.PdfHistoryRequest) (*pdfapi.PdfHistoryResponse, error) {
+//func (m *PdfService) GetScreenrecordingPdfExportHistory(ctx context.Context, req *pdfapi.PdfHistoryRequest) (*pdfapi.PdfHistoryResponse, error) {
 //	if req.AgentId == 0 {
 //		return nil, fmt.Errorf("agent_id is required")
 //	}
@@ -46,7 +46,7 @@ package drafts
 //		return nil, err
 //	}
 //
-//	return m.app.Store.Pdf().GetPdfExportHistory(opts, req)
+//	return m.app.Store.Pdf().GetScreenrecordingPdfExportHistory(opts, req)
 //}
 //
 //// GeneratePdfExport creates a new export task asynchronously and returns metadata.

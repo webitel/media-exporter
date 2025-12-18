@@ -32,9 +32,9 @@ var WebitelAPI = WebitelServicesInfo{
 		ObjClass:           "",
 		AdditionalLicenses: []string{},
 		WebitelMethods: map[string]WebitelMethod{
-			"GeneratePdfExport": WebitelMethod{
+			"GenerateScreenrecordingPdfExport": WebitelMethod{
 				Access: 0,
-				Input:  "PdfGenerateRequest",
+				Input:  "ScreenrecordingPdfGenerateRequest",
 				Output: "PdfExportMetadata",
 				HttpBindings: []*HttpBinding{
 					{
@@ -54,13 +54,35 @@ var WebitelAPI = WebitelServicesInfo{
 					},
 				},
 			},
-			"GetPdfExportHistory": WebitelMethod{
+			"GetScreenrecordingPdfExportHistory": WebitelMethod{
 				Access: 0,
-				Input:  "PdfHistoryRequest",
+				Input:  "PdfScreenrecordingHistoryRequest",
 				Output: "PdfHistoryResponse",
 				HttpBindings: []*HttpBinding{
 					{
 						Path:   "/export/pdf/{agent_id}/history",
+						Method: "GET",
+					},
+				},
+			},
+			"GenerateCallPdfExport": WebitelMethod{
+				Access: 0,
+				Input:  "PdfGenerateCallPdfRequest",
+				Output: "PdfExportMetadata",
+				HttpBindings: []*HttpBinding{
+					{
+						Path:   "/export/pdf/call/{call_id}",
+						Method: "POST",
+					},
+				},
+			},
+			"GetCallPdfHistory": WebitelMethod{
+				Access: 0,
+				Input:  "PdfCallPdfHistoryRequest",
+				Output: "PdfHistoryResponse",
+				HttpBindings: []*HttpBinding{
+					{
+						Path:   "/export/pdf/call/{call_id}/history",
 						Method: "GET",
 					},
 				},

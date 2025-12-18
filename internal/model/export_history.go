@@ -29,6 +29,7 @@ type NewExportHistory struct {
 	UploadedBy int64        `db:"uploaded_by"`
 	Status     ExportStatus `db:"status"`
 	AgentID    int64        `db:"agent_id"`
+	CallID     string       `db:"call_id"`
 }
 
 type UpdateExportStatus struct {

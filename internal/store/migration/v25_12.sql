@@ -6,5 +6,13 @@ alter table media_exporter.pdf_export_history
     foreign key (dc) references directory.wbt_domain
       on delete cascade;
 
+alter table media_exporter.pdf_export_history
+  alter column agent_id drop not null;
+
+
+alter table media_exporter.pdf_export_history
+  add call_id varchar;
+
+
 
 

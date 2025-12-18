@@ -20,7 +20,7 @@ type Pdf struct {
 	storage *Store
 }
 
-func (m *Pdf) GetPdfExportHistory(opts *options.SearchOptions, req *pdfapi.PdfHistoryRequest) (*pdfapi.PdfHistoryResponse, error) {
+func (m *Pdf) GetScreenrecordingPdfExportHistory(opts *options.SearchOptions, req *pdfapi.PdfScreenrecordingHistoryRequest) (*pdfapi.PdfHistoryResponse, error) {
 	db, err := m.storage.Database()
 	if err != nil {
 		return nil, dberr.NewDBInternalError("get_pdf_export_history", err)
@@ -133,6 +133,119 @@ func (m *Pdf) GetPdfExportHistory(opts *options.SearchOptions, req *pdfapi.PdfHi
 	}, nil
 }
 
+func (m *Pdf) GetCallPdfExportHistory(opts *options.SearchOptions, req *pdfapi.PdfCallPdfHistoryRequest) (*pdfapi.PdfHistoryResponse, error) {
+	db, err := m.storage.Database()
+	if err != nil {
+		return nil, dberr.NewDBInternalError("get_pdf_export_history", err)
+	}
+
+	// Page & size
+	page := int64(req.Page)
+	if page < 1 {
+		page = 1
+	}
+	size := int64(req.Size)
+	if size <= 0 {
+		size = 20
+	}
+
+	offset := (page - 1) * size
+	limit := size + 1 // fetch one extra to check has_next
+
+	// Build query with Squirrel
+	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
+
+	query := psql.
+		Select(
+			"h.id",
+			"h.name",
+			"h.file_id",
+			"h.mime",
+			"h.uploaded_at",
+			"h.updated_at",
+			"h.uploaded_by",
+			"h.updated_by",
+			"h.status",
+		).
+		From("media_exporter.pdf_export_history h").
+		Where(sq.And{
+			sq.Eq{"h.call_id": req.CallId},
+			sq.Or{
+				sq.Eq{"h.file_id": nil},
+				sq.Expr("EXISTS (SELECT 1 FROM storage.files f WHERE f.id = h.file_id AND f.removed IS null)"),
+			},
+		}).
+		OrderBy("h.uploaded_at DESC").
+		Offset(uint64(offset)).
+		Limit(uint64(limit))
+
+	sqlStr, args, err := query.ToSql()
+	if err != nil {
+		return nil, dberr.NewDBInternalError("get_pdf_export_history", err)
+	}
+
+	rows, err := db.Query(context.Background(), sqlStr, args...)
+	if err != nil {
+		return nil, dberr.NewDBInternalError("get_pdf_export_history", err)
+	}
+	defer rows.Close()
+
+	var records []*pdfapi.PdfHistoryRecord
+	for rows.Next() {
+		var record model.ExportHistory
+		var fileID sql.NullInt64
+		err := rows.Scan(
+			&record.ID,
+			&record.Name,
+			&fileID,
+			&record.Mime,
+			&record.UploadedAt,
+			&record.UpdatedAt,
+			&record.UploadedBy,
+			&record.UpdatedBy,
+			&record.Status,
+		)
+		if err != nil {
+			return nil, dberr.NewDBInternalError("get_pdf_export_history", err)
+		}
+
+		if fileID.Valid {
+			record.FileID = fileID.Int64
+		} else {
+			record.FileID = 0
+		}
+
+		records = append(records, &pdfapi.PdfHistoryRecord{
+			Id:        record.ID,
+			Name:      record.Name,
+			FileId:    record.FileID,
+			MimeType:  record.Mime,
+			CreatedAt: record.UploadedAt,
+			UpdatedAt: record.UpdatedAt,
+			CreatedBy: record.UploadedBy,
+			UpdatedBy: record.UpdatedBy,
+			Status:    mapStatusToProto(string(record.Status)),
+		})
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, dberr.NewDBInternalError("get_pdf_export_history", err)
+	}
+
+	// Check has_next
+	hasNext := false
+	if int64(len(records)) > size {
+		hasNext = true
+		records = records[:len(records)-1] // drop the extra record
+	}
+
+	return &pdfapi.PdfHistoryResponse{
+		Page: int32(page),
+		Next: hasNext,
+		Data: records,
+	}, nil
+}
+
 func mapStatusToProto(status string) pdfapi.PdfExportStatus {
 	switch status {
 	case "pending":
@@ -154,12 +267,27 @@ func (m *Pdf) InsertPdfExportHistory(opts *options.CreateOptions, input *model.N
 		return 0, dberr.NewDBInternalError("insert_pdf_export_history", err)
 	}
 
+	// Підготовка значень для вставки (обробка NULL)
+	var agentID interface{}
+	if input.AgentID != 0 {
+		agentID = input.AgentID
+	} else {
+		agentID = nil // В БД запишеться NULL
+	}
+
+	var callID interface{}
+	if input.CallID != "" {
+		callID = input.CallID
+	} else {
+		callID = nil // В БД запишеться NULL
+	}
+
 	query := `
-		INSERT INTO media_exporter.pdf_export_history
-			(name, file_id, mime, uploaded_at, updated_at, uploaded_by, status, agent_id, dc)
-		VALUES ($1, $2, $3, $4, $4, $5, $6, $7, $8)
-		RETURNING id
-	`
+       INSERT INTO media_exporter.pdf_export_history
+          (name, file_id, mime, uploaded_at, updated_at, uploaded_by, status, agent_id, call_id, dc)
+       VALUES ($1, $2, $3, $4, $4, $5, $6, $7, $8, $9)
+       RETURNING id
+    `
 
 	var id int64
 	err = db.QueryRow(
@@ -171,9 +299,11 @@ func (m *Pdf) InsertPdfExportHistory(opts *options.CreateOptions, input *model.N
 		input.UploadedAt,
 		input.UploadedBy,
 		input.Status,
-		input.AgentID,
+		agentID,
+		callID,
 		opts.Auth.GetDomainId(),
 	).Scan(&id)
+
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {

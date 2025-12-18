@@ -5,6 +5,7 @@ type ExportTask struct {
 	TaskID   string `json:"task_id"`
 	UserID   int64  `json:"user_id"`
 	AgentID  int64  `json:"agent_id"`
+	CallID   string `json:"call_id"`
 	DomainID int64  `json:"domain_id"`
 	Channel  string `json:"channel"`
 	// From / To are Unix milliseconds timestamps to filter files by upload date
