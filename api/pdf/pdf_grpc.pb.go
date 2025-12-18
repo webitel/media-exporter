@@ -19,10 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	PdfService_GeneratePdfExport_FullMethodName     = "/webitel_media_exporter.PdfService/GeneratePdfExport"
-	PdfService_DownloadPdfExport_FullMethodName     = "/webitel_media_exporter.PdfService/DownloadPdfExport"
-	PdfService_GetPdfExportHistory_FullMethodName   = "/webitel_media_exporter.PdfService/GetPdfExportHistory"
-	PdfService_DeletePdfExportRecord_FullMethodName = "/webitel_media_exporter.PdfService/DeletePdfExportRecord"
+	PdfService_GenerateScreenrecordingPdfExport_FullMethodName   = "/webitel_media_exporter.PdfService/GenerateScreenrecordingPdfExport"
+	PdfService_DownloadPdfExport_FullMethodName                  = "/webitel_media_exporter.PdfService/DownloadPdfExport"
+	PdfService_GetScreenrecordingPdfExportHistory_FullMethodName = "/webitel_media_exporter.PdfService/GetScreenrecordingPdfExportHistory"
+	PdfService_GenerateCallPdfExport_FullMethodName              = "/webitel_media_exporter.PdfService/GenerateCallPdfExport"
+	PdfService_GetCallPdfHistory_FullMethodName                  = "/webitel_media_exporter.PdfService/GetCallPdfHistory"
+	PdfService_DeletePdfExportRecord_FullMethodName              = "/webitel_media_exporter.PdfService/DeletePdfExportRecord"
 )
 
 // PdfServiceClient is the client API for PdfService service.
@@ -34,11 +36,15 @@ const (
 type PdfServiceClient interface {
 	// Generate a new PDF export asynchronously.
 	// Returns metadata about the created export task.
-	GeneratePdfExport(ctx context.Context, in *PdfGenerateRequest, opts ...grpc.CallOption) (*PdfExportMetadata, error)
+	GenerateScreenrecordingPdfExport(ctx context.Context, in *ScreenrecordingPdfGenerateRequest, opts ...grpc.CallOption) (*PdfExportMetadata, error)
 	// Download a previously generated PDF by export ID.
 	DownloadPdfExport(ctx context.Context, in *PdfDownloadRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[PdfExportChunk], error)
 	// Get paginated history of PDF exports for a given agent.
-	GetPdfExportHistory(ctx context.Context, in *PdfHistoryRequest, opts ...grpc.CallOption) (*PdfHistoryResponse, error)
+	GetScreenrecordingPdfExportHistory(ctx context.Context, in *PdfScreenrecordingHistoryRequest, opts ...grpc.CallOption) (*PdfHistoryResponse, error)
+	// Generate a new PDF export asynchronously by Call ID.
+	GenerateCallPdfExport(ctx context.Context, in *PdfGenerateCallPdfRequest, opts ...grpc.CallOption) (*PdfExportMetadata, error)
+	// Get history of PDF exports for a specific Call.
+	GetCallPdfHistory(ctx context.Context, in *PdfCallPdfHistoryRequest, opts ...grpc.CallOption) (*PdfHistoryResponse, error)
 	DeletePdfExportRecord(ctx context.Context, in *DeletePdfExportRecordRequest, opts ...grpc.CallOption) (*DeletePdfExportRecordResponse, error)
 }
 
@@ -50,10 +56,10 @@ func NewPdfServiceClient(cc grpc.ClientConnInterface) PdfServiceClient {
 	return &pdfServiceClient{cc}
 }
 
-func (c *pdfServiceClient) GeneratePdfExport(ctx context.Context, in *PdfGenerateRequest, opts ...grpc.CallOption) (*PdfExportMetadata, error) {
+func (c *pdfServiceClient) GenerateScreenrecordingPdfExport(ctx context.Context, in *ScreenrecordingPdfGenerateRequest, opts ...grpc.CallOption) (*PdfExportMetadata, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PdfExportMetadata)
-	err := c.cc.Invoke(ctx, PdfService_GeneratePdfExport_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, PdfService_GenerateScreenrecordingPdfExport_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -79,10 +85,30 @@ func (c *pdfServiceClient) DownloadPdfExport(ctx context.Context, in *PdfDownloa
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type PdfService_DownloadPdfExportClient = grpc.ServerStreamingClient[PdfExportChunk]
 
-func (c *pdfServiceClient) GetPdfExportHistory(ctx context.Context, in *PdfHistoryRequest, opts ...grpc.CallOption) (*PdfHistoryResponse, error) {
+func (c *pdfServiceClient) GetScreenrecordingPdfExportHistory(ctx context.Context, in *PdfScreenrecordingHistoryRequest, opts ...grpc.CallOption) (*PdfHistoryResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PdfHistoryResponse)
-	err := c.cc.Invoke(ctx, PdfService_GetPdfExportHistory_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, PdfService_GetScreenrecordingPdfExportHistory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *pdfServiceClient) GenerateCallPdfExport(ctx context.Context, in *PdfGenerateCallPdfRequest, opts ...grpc.CallOption) (*PdfExportMetadata, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PdfExportMetadata)
+	err := c.cc.Invoke(ctx, PdfService_GenerateCallPdfExport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *pdfServiceClient) GetCallPdfHistory(ctx context.Context, in *PdfCallPdfHistoryRequest, opts ...grpc.CallOption) (*PdfHistoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PdfHistoryResponse)
+	err := c.cc.Invoke(ctx, PdfService_GetCallPdfHistory_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -108,11 +134,15 @@ func (c *pdfServiceClient) DeletePdfExportRecord(ctx context.Context, in *Delete
 type PdfServiceServer interface {
 	// Generate a new PDF export asynchronously.
 	// Returns metadata about the created export task.
-	GeneratePdfExport(context.Context, *PdfGenerateRequest) (*PdfExportMetadata, error)
+	GenerateScreenrecordingPdfExport(context.Context, *ScreenrecordingPdfGenerateRequest) (*PdfExportMetadata, error)
 	// Download a previously generated PDF by export ID.
 	DownloadPdfExport(*PdfDownloadRequest, grpc.ServerStreamingServer[PdfExportChunk]) error
 	// Get paginated history of PDF exports for a given agent.
-	GetPdfExportHistory(context.Context, *PdfHistoryRequest) (*PdfHistoryResponse, error)
+	GetScreenrecordingPdfExportHistory(context.Context, *PdfScreenrecordingHistoryRequest) (*PdfHistoryResponse, error)
+	// Generate a new PDF export asynchronously by Call ID.
+	GenerateCallPdfExport(context.Context, *PdfGenerateCallPdfRequest) (*PdfExportMetadata, error)
+	// Get history of PDF exports for a specific Call.
+	GetCallPdfHistory(context.Context, *PdfCallPdfHistoryRequest) (*PdfHistoryResponse, error)
 	DeletePdfExportRecord(context.Context, *DeletePdfExportRecordRequest) (*DeletePdfExportRecordResponse, error)
 	mustEmbedUnimplementedPdfServiceServer()
 }
@@ -124,14 +154,20 @@ type PdfServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedPdfServiceServer struct{}
 
-func (UnimplementedPdfServiceServer) GeneratePdfExport(context.Context, *PdfGenerateRequest) (*PdfExportMetadata, error) {
-	return nil, status.Error(codes.Unimplemented, "method GeneratePdfExport not implemented")
+func (UnimplementedPdfServiceServer) GenerateScreenrecordingPdfExport(context.Context, *ScreenrecordingPdfGenerateRequest) (*PdfExportMetadata, error) {
+	return nil, status.Error(codes.Unimplemented, "method GenerateScreenrecordingPdfExport not implemented")
 }
 func (UnimplementedPdfServiceServer) DownloadPdfExport(*PdfDownloadRequest, grpc.ServerStreamingServer[PdfExportChunk]) error {
 	return status.Error(codes.Unimplemented, "method DownloadPdfExport not implemented")
 }
-func (UnimplementedPdfServiceServer) GetPdfExportHistory(context.Context, *PdfHistoryRequest) (*PdfHistoryResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetPdfExportHistory not implemented")
+func (UnimplementedPdfServiceServer) GetScreenrecordingPdfExportHistory(context.Context, *PdfScreenrecordingHistoryRequest) (*PdfHistoryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetScreenrecordingPdfExportHistory not implemented")
+}
+func (UnimplementedPdfServiceServer) GenerateCallPdfExport(context.Context, *PdfGenerateCallPdfRequest) (*PdfExportMetadata, error) {
+	return nil, status.Error(codes.Unimplemented, "method GenerateCallPdfExport not implemented")
+}
+func (UnimplementedPdfServiceServer) GetCallPdfHistory(context.Context, *PdfCallPdfHistoryRequest) (*PdfHistoryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCallPdfHistory not implemented")
 }
 func (UnimplementedPdfServiceServer) DeletePdfExportRecord(context.Context, *DeletePdfExportRecordRequest) (*DeletePdfExportRecordResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeletePdfExportRecord not implemented")
@@ -157,20 +193,20 @@ func RegisterPdfServiceServer(s grpc.ServiceRegistrar, srv PdfServiceServer) {
 	s.RegisterService(&PdfService_ServiceDesc, srv)
 }
 
-func _PdfService_GeneratePdfExport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PdfGenerateRequest)
+func _PdfService_GenerateScreenrecordingPdfExport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ScreenrecordingPdfGenerateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(PdfServiceServer).GeneratePdfExport(ctx, in)
+		return srv.(PdfServiceServer).GenerateScreenrecordingPdfExport(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: PdfService_GeneratePdfExport_FullMethodName,
+		FullMethod: PdfService_GenerateScreenrecordingPdfExport_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PdfServiceServer).GeneratePdfExport(ctx, req.(*PdfGenerateRequest))
+		return srv.(PdfServiceServer).GenerateScreenrecordingPdfExport(ctx, req.(*ScreenrecordingPdfGenerateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -186,20 +222,56 @@ func _PdfService_DownloadPdfExport_Handler(srv interface{}, stream grpc.ServerSt
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type PdfService_DownloadPdfExportServer = grpc.ServerStreamingServer[PdfExportChunk]
 
-func _PdfService_GetPdfExportHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PdfHistoryRequest)
+func _PdfService_GetScreenrecordingPdfExportHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PdfScreenrecordingHistoryRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(PdfServiceServer).GetPdfExportHistory(ctx, in)
+		return srv.(PdfServiceServer).GetScreenrecordingPdfExportHistory(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: PdfService_GetPdfExportHistory_FullMethodName,
+		FullMethod: PdfService_GetScreenrecordingPdfExportHistory_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PdfServiceServer).GetPdfExportHistory(ctx, req.(*PdfHistoryRequest))
+		return srv.(PdfServiceServer).GetScreenrecordingPdfExportHistory(ctx, req.(*PdfScreenrecordingHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PdfService_GenerateCallPdfExport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PdfGenerateCallPdfRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PdfServiceServer).GenerateCallPdfExport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PdfService_GenerateCallPdfExport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PdfServiceServer).GenerateCallPdfExport(ctx, req.(*PdfGenerateCallPdfRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PdfService_GetCallPdfHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PdfCallPdfHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PdfServiceServer).GetCallPdfHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PdfService_GetCallPdfHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PdfServiceServer).GetCallPdfHistory(ctx, req.(*PdfCallPdfHistoryRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -230,12 +302,20 @@ var PdfService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*PdfServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GeneratePdfExport",
-			Handler:    _PdfService_GeneratePdfExport_Handler,
+			MethodName: "GenerateScreenrecordingPdfExport",
+			Handler:    _PdfService_GenerateScreenrecordingPdfExport_Handler,
 		},
 		{
-			MethodName: "GetPdfExportHistory",
-			Handler:    _PdfService_GetPdfExportHistory_Handler,
+			MethodName: "GetScreenrecordingPdfExportHistory",
+			Handler:    _PdfService_GetScreenrecordingPdfExportHistory_Handler,
+		},
+		{
+			MethodName: "GenerateCallPdfExport",
+			Handler:    _PdfService_GenerateCallPdfExport_Handler,
+		},
+		{
+			MethodName: "GetCallPdfHistory",
+			Handler:    _PdfService_GetCallPdfHistory_Handler,
 		},
 		{
 			MethodName: "DeletePdfExportRecord",
