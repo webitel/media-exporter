@@ -134,7 +134,7 @@ func SetTaskStatus(app *App, historyID int64, taskID, status string, updatedBy i
 	_ = app.Cache.SetExportStatus(taskID, status)
 	return app.Store.Pdf().UpdatePdfExportStatus(&domain.UpdateExportStatus{
 		ID:        historyID,
-		Status:    domain.ExportStatus(status),
+		Status:    status,
 		UpdatedBy: updatedBy,
 		FileID:    fileID,
 	})

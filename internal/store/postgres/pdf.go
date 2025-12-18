@@ -20,118 +20,107 @@ type Pdf struct {
 	storage *Store
 }
 
+// --- Screenrecording History ---
+
 func (m *Pdf) GetPdfExportHistory(req *domain.PdfHistoryRequestOptions) (*domain.HistoryResponse, error) {
+	filter := sq.And{
+		sq.Eq{"h.agent_id": req.AgentID},
+		sq.Or{
+			sq.Eq{"h.file_id": nil},
+			sq.Expr("EXISTS (SELECT 1 FROM storage.files f WHERE f.id = h.file_id AND f.removed IS NULL)"),
+		},
+	}
+	return m.listHistory(filter, int64(req.Page), int64(req.Size))
+}
+
+// --- Call History ---
+
+func (m *Pdf) GetCallPdfExportHistory(req *domain.CallHistoryRequestOptions) (*domain.HistoryResponse, error) {
+	filter := sq.And{
+		sq.Eq{"h.call_id": req.CallID},
+		sq.Or{
+			sq.Eq{"h.file_id": nil},
+			sq.Expr("EXISTS (SELECT 1 FROM storage.files f WHERE f.id = h.file_id AND f.removed IS NULL)"),
+		},
+	}
+	return m.listHistory(filter, int64(req.Page), int64(req.Size))
+}
+
+// Internal helper for paginated history fetching
+func (m *Pdf) listHistory(filter sq.Sqlizer, page, size int64) (*domain.HistoryResponse, error) {
 	db, err := m.storage.Database()
 	if err != nil {
-		return nil, dberr.NewDBInternalError("get_pdf_export_history", err)
+		return nil, dberr.NewDBInternalError("list_history", err)
 	}
 
-	// Total & size
-	page := int64(req.Page)
 	if page < 1 {
 		page = 1
 	}
-	size := int64(req.Size)
 	if size <= 0 {
 		size = 20
 	}
 
 	offset := (page - 1) * size
-	limit := size + 1 // fetch one extra to check has_next
+	limit := size + 1
 
-	// Build query with Squirrel
 	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
-
 	query := psql.
 		Select(
-			"id",
-			"name",
-			"file_id",
-			"mime",
-			"uploaded_at",
-			"updated_at",
-			"uploaded_by",
-			"updated_by",
-			"status",
+			"h.id", "h.name", "h.file_id", "h.mime",
+			"h.uploaded_at", "h.updated_at", "h.uploaded_by", "h.updated_by", "h.status",
 		).
-		From("media_exporter.pdf_export_history").
-		Where(sq.Eq{"agent_id": req.AgentID}).
-		OrderBy("uploaded_at DESC").
+		From("media_exporter.pdf_export_history h").
+		Where(filter).
+		OrderBy("h.uploaded_at DESC").
 		Offset(uint64(offset)).
 		Limit(uint64(limit))
 
 	sqlStr, args, err := query.ToSql()
 	if err != nil {
-		return nil, dberr.NewDBInternalError("get_pdf_export_history", err)
+		return nil, dberr.NewDBInternalError("list_history", err)
 	}
 
 	rows, err := db.Query(context.Background(), sqlStr, args...)
 	if err != nil {
-		return nil, dberr.NewDBInternalError("get_pdf_export_history", err)
+		return nil, dberr.NewDBInternalError("list_history", err)
 	}
 	defer rows.Close()
 
-	// Проміжний зріз для сканування (відповідає стовпцям БД)
-	var scannedRecords []*domain.ExportHistory
+	var records []*domain.HistoryRecord
 	for rows.Next() {
-		var record domain.ExportHistory
+		var rec domain.HistoryRecord
 		var fileID sql.NullInt64
+		var status string
 
 		err := rows.Scan(
-			&record.ID,
-			&record.Name,
-			&fileID,
-			&record.Mime,
-			&record.UploadedAt,
-			&record.UpdatedAt,
-			&record.UploadedBy,
-			&record.UpdatedBy,
-			&record.Status,
+			&rec.ID, &rec.Name, &fileID, &rec.MimeType,
+			&rec.CreatedAt, &rec.UpdatedAt, &rec.CreatedBy, &rec.UpdatedBy, &status,
 		)
 		if err != nil {
-			return nil, dberr.NewDBInternalError("get_pdf_export_history", err)
+			return nil, dberr.NewDBInternalError("list_history", err)
 		}
 
 		if fileID.Valid {
-			record.FileID = fileID.Int64
-		} else {
-			record.FileID = 0
+			rec.FileID = fileID.Int64
 		}
-
-		scannedRecords = append(scannedRecords, &record)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, dberr.NewDBInternalError("get_pdf_export_history", err)
+		rec.Status = status
+		records = append(records, &rec)
 	}
 
 	hasNext := false
-	if int64(len(scannedRecords)) > size {
+	if int64(len(records)) > size {
 		hasNext = true
-		scannedRecords = scannedRecords[:len(scannedRecords)-1] // drop the extra record
-	}
-
-	finalRecords := make([]*domain.HistoryRecord, len(scannedRecords))
-	for i, rec := range scannedRecords {
-		finalRecords[i] = &domain.HistoryRecord{
-			ID:        rec.ID,
-			Name:      rec.Name,
-			FileID:    rec.FileID,
-			MimeType:  rec.Mime,
-			CreatedAt: rec.UploadedAt,
-			UpdatedAt: rec.UpdatedAt,
-			CreatedBy: rec.UploadedBy,
-			UpdatedBy: rec.UpdatedBy,
-			Status:    string(rec.Status),
-		}
+		records = records[:size]
 	}
 
 	return &domain.HistoryResponse{
 		Next:  hasNext,
-		Data:  finalRecords,
-		Total: int64(len(finalRecords)) + offset,
+		Data:  records,
+		Total: int64(len(records)) + offset, // Note: This is an estimation. For exact total, a separate COUNT query is needed.
 	}, nil
 }
+
+// --- Mutations ---
 
 func (m *Pdf) InsertPdfExportHistory(opts *options.CreateOptions, input *domain.NewExportHistory) (int64, error) {
 	db, err := m.storage.Database()
@@ -140,44 +129,46 @@ func (m *Pdf) InsertPdfExportHistory(opts *options.CreateOptions, input *domain.
 	}
 
 	query := `
-		INSERT INTO media_exporter.pdf_export_history
-			(name, file_id, mime, uploaded_at, updated_at, uploaded_by, status, agent_id, dc)
-		VALUES ($1, $2, $3, $4, $4, $5, $6, $7, $8)
-		RETURNING id
-	`
+       INSERT INTO media_exporter.pdf_export_history
+          (name, file_id, mime, uploaded_at, updated_at, uploaded_by, status, agent_id, call_id, dc)
+       VALUES ($1, $2, $3, $4, $4, $5, $6, $7, $8, $9)
+       RETURNING id
+    `
 
 	var id int64
+
+	// Перевірка на 0 для file_id
+	var fileID sql.NullInt64
+	if input.FileID != 0 {
+		fileID = sql.NullInt64{Int64: input.FileID, Valid: true}
+	}
+
+	var agentID sql.NullInt64
+	if input.AgentID != 0 {
+		agentID = sql.NullInt64{Int64: input.AgentID, Valid: true}
+	}
+
+	var callID sql.NullString
+	if input.CallID != "" {
+		callID = sql.NullString{String: input.CallID, Valid: true}
+	}
+
 	err = db.QueryRow(
 		context.Background(),
 		query,
 		input.Name,
-		input.FileID,
+		fileID,
 		input.Mime,
 		input.UploadedAt,
 		input.UploadedBy,
 		input.Status,
-		input.AgentID,
+		agentID,
+		callID,
 		opts.Auth.GetDomainId(),
 	).Scan(&id)
+
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
-			switch pgErr.Code {
-			case "23505": // unique_violation
-				return 0, &dberr.DBUniqueViolationError{
-					DBError: *dberr.NewDBError("insert_export_history", pgErr.Message),
-					Column:  pgErr.ConstraintName,
-				}
-			case "23503": // foreign_key_violation
-				return 0, &dberr.DBForeignKeyViolationError{
-					DBError:         *dberr.NewDBError("insert_export_history", pgErr.Message),
-					ForeignKeyTable: pgErr.TableName,
-				}
-			default:
-				return 0, dberr.NewDBInternalError("insert_export_history", err)
-			}
-		}
-		return 0, dberr.NewDBInternalError("insert_export_history", err)
+		return 0, m.handlePgError("insert_export_history", err)
 	}
 
 	return id, nil
@@ -194,7 +185,7 @@ func (m *Pdf) UpdatePdfExportStatus(input *domain.UpdateExportStatus) error {
     SET status = $1,
         updated_at = $2,
         updated_by = $3,
-        file_id = COALESCE($4, file_id)
+        file_id = COALESCE(NULLIF($4, 0), file_id)
     WHERE id = $5
 `
 	cmd, err := db.Exec(
@@ -211,8 +202,7 @@ func (m *Pdf) UpdatePdfExportStatus(input *domain.UpdateExportStatus) error {
 	}
 
 	if cmd.RowsAffected() == 0 {
-		return dberr.NewDBNotFoundError("update_export_status",
-			fmt.Sprintf("no export history record found for id=%d", input.ID))
+		return dberr.NewDBNotFoundError("update_export_status", fmt.Sprintf("id=%d", input.ID))
 	}
 
 	return nil
@@ -234,6 +224,19 @@ func (m *Pdf) DeletePdfExportRecord(opts *options.DeleteOptions, recordID int64)
 		return fmt.Errorf("no export history record found for id=%d", recordID)
 	}
 	return nil
+}
+
+func (m *Pdf) handlePgError(op string, err error) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		switch pgErr.Code {
+		case "23505":
+			return &dberr.DBUniqueViolationError{DBError: *dberr.NewDBError(op, pgErr.Message), Column: pgErr.ConstraintName}
+		case "23503":
+			return &dberr.DBForeignKeyViolationError{DBError: *dberr.NewDBError(op, pgErr.Message), ForeignKeyTable: pgErr.TableName}
+		}
+	}
+	return dberr.NewDBInternalError(op, err)
 }
 
 func NewPdfStore(store *Store) (store.PdfStore, error) {

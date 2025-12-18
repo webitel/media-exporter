@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"context"
-	"fmt"
 
 	pdfapi "github.com/webitel/media-exporter/api/pdf"
 	"github.com/webitel/media-exporter/api/storage"
@@ -31,30 +30,146 @@ func NewPdfHandler(service service.PdfService, storageClient storage.FileService
 	}, nil
 }
 
-func mapDomainStatusToProto(status string) pdfapi.PdfExportStatus {
+// --- Screenrecording Exports ---
+
+func (h *PdfHandler) CreateScreenrecordingExport(ctx context.Context, req *pdfapi.CreateScreenrecordingRequest) (*pdfapi.ExportTask, error) {
+	if req.AgentId == 0 {
+		return nil, status.Error(codes.InvalidArgument, "agent_id is required")
+	}
+
+	opts, err := options.NewCreateOptions(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata, err := h.service.GenerateExport(ctx, opts, &domain.GenerateExportRequest{
+		AgentID: req.AgentId,
+		FileIDs: req.FileIds,
+		From:    req.From,
+		To:      req.To,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &pdfapi.ExportTask{
+		TaskId:   metadata.TaskID,
+		FileName: metadata.FileName,
+		MimeType: metadata.MimeType,
+		Status:   mapDomainStatusToProto(metadata.Status),
+		Size:     metadata.Size,
+	}, nil
+}
+
+func (h *PdfHandler) ListScreenrecordingExports(ctx context.Context, req *pdfapi.ListScreenrecordingHistoryRequest) (*pdfapi.ListExportsResponse, error) {
+	if req.AgentId == 0 {
+		return nil, status.Error(codes.InvalidArgument, "agent_id is required")
+	}
+
+	internalResponse, err := h.service.GetHistory(ctx, &domain.PdfHistoryRequestOptions{
+		AgentID: req.AgentId,
+		Page:    req.Page,
+		Size:    req.Size,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return convertToProtoHistoryResponse(internalResponse, int64(req.Size), int64(req.Page)), nil
+}
+
+// --- Call Exports ---
+
+func (h *PdfHandler) CreateCallExport(ctx context.Context, req *pdfapi.CreateCallExportRequest) (*pdfapi.ExportTask, error) {
+	if req.CallId == "" {
+		return nil, status.Error(codes.InvalidArgument, "call_id is required")
+	}
+
+	opts, err := options.NewCreateOptions(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata, err := h.service.GenerateCallExport(ctx, opts, &domain.GenerateCallExportRequest{
+		CallID:  req.CallId,
+		FileIDs: req.FileIds,
+		From:    req.From,
+		To:      req.To,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &pdfapi.ExportTask{
+		TaskId:   metadata.TaskID,
+		FileName: metadata.FileName,
+		MimeType: metadata.MimeType,
+		Status:   mapDomainStatusToProto(metadata.Status),
+		Size:     metadata.Size,
+	}, nil
+}
+
+func (h *PdfHandler) ListCallExports(ctx context.Context, req *pdfapi.ListCallHistoryRequest) (*pdfapi.ListExportsResponse, error) {
+	if req.CallId == "" {
+		return nil, status.Error(codes.InvalidArgument, "call_id is required")
+	}
+
+	internalResponse, err := h.service.GetCallHistory(ctx, &domain.CallHistoryRequestOptions{
+		CallID: req.CallId,
+		Page:   req.Page,
+		Size:   req.Size,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return convertToProtoHistoryResponse(internalResponse, int64(req.Size), int64(req.Page)), nil
+}
+
+// --- General Operations ---
+
+func (h *PdfHandler) DeleteExport(ctx context.Context, req *pdfapi.DeleteExportRequest) (*pdfapi.DeleteExportResponse, error) {
+	if req.Id == 0 {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+
+	opts, err := options.NewDeleteOptions(ctx, []int64{req.Id})
+	if err != nil {
+		return nil, err
+	}
+
+	err = h.service.DeleteRecord(ctx, opts, req.Id)
+	if err != nil {
+		return nil, err
+	}
+	return &pdfapi.DeleteExportResponse{Id: req.Id}, nil
+}
+
+// --- Mappers ---
+
+func mapDomainStatusToProto(status string) pdfapi.ExportStatus {
 	switch status {
-	case "done":
-		return pdfapi.PdfExportStatus_PDF_EXPORT_STATUS_DONE
-	case "failed":
-		return pdfapi.PdfExportStatus_PDF_EXPORT_STATUS_FAILED
 	case "pending":
-		return pdfapi.PdfExportStatus_PDF_EXPORT_STATUS_PENDING
+		return pdfapi.ExportStatus_PENDING
 	case "processing":
-		return pdfapi.PdfExportStatus_PDF_EXPORT_STATUS_PROCESSING
+		return pdfapi.ExportStatus_PROCESSING
+	case "done":
+		return pdfapi.ExportStatus_DONE
+	case "failed":
+		return pdfapi.ExportStatus_FAILED
 	default:
-		return pdfapi.PdfExportStatus_PDF_EXPORT_STATUS_UNSPECIFIED
+		return pdfapi.ExportStatus_EXPORT_STATUS_UNSPECIFIED
 	}
 }
 
-func ConvertToProtoHistoryResponse(internal *domain.HistoryResponse, limit, offset int64) *pdfapi.PdfHistoryResponse {
+func convertToProtoHistoryResponse(internal *domain.HistoryResponse, limit, page int64) *pdfapi.ListExportsResponse {
 	if internal == nil {
-		return &pdfapi.PdfHistoryResponse{}
+		return &pdfapi.ListExportsResponse{}
 	}
 
-	protoRecords := make([]*pdfapi.PdfHistoryRecord, len(internal.Data))
-
+	protoRecords := make([]*pdfapi.ExportRecord, len(internal.Data))
 	for i, rec := range internal.Data {
-		protoRecords[i] = &pdfapi.PdfHistoryRecord{
+		protoRecords[i] = &pdfapi.ExportRecord{
 			Id:        rec.ID,
 			Name:      rec.Name,
 			FileId:    rec.FileID,
@@ -66,80 +181,11 @@ func ConvertToProtoHistoryResponse(internal *domain.HistoryResponse, limit, offs
 			Status:    mapDomainStatusToProto(rec.Status),
 		}
 	}
+	hasNext := internal.Next
 
-	next := false
-	if limit > 0 && (offset+int64(len(internal.Data)) < internal.Total) {
-		next = true
+	return &pdfapi.ListExportsResponse{
+		Page:  int32(page),
+		Next:  hasNext,
+		Items: protoRecords,
 	}
-
-	return &pdfapi.PdfHistoryResponse{
-		Data: protoRecords,
-		Next: next,
-	}
-}
-
-func (h *PdfHandler) GetPdfExportHistory(ctx context.Context, req *pdfapi.PdfHistoryRequest) (*pdfapi.PdfHistoryResponse, error) {
-	if req.AgentId == 0 {
-		return nil, status.Error(codes.InvalidArgument, "AgentId is required")
-	}
-
-	reqOpts := &domain.PdfHistoryRequestOptions{
-		AgentID: req.AgentId,
-	}
-
-	internalResponse, err := h.service.GetHistory(ctx, reqOpts)
-	if err != nil {
-		return nil, err
-	}
-
-	return ConvertToProtoHistoryResponse(internalResponse, int64(req.Size), int64(req.Page)), nil
-}
-
-func (h *PdfHandler) GeneratePdfExport(ctx context.Context, req *pdfapi.PdfGenerateRequest) (*pdfapi.PdfExportMetadata, error) {
-	opts, err := options.NewCreateOptions(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	metadata, err := h.service.GenerateExport(
-		ctx,
-		opts,
-		&domain.GenerateExportRequest{
-			AgentID: req.AgentId,
-			FileIDs: req.FileIds,
-			Channel: int32(req.Channel),
-			From:    req.From,
-			To:      req.To,
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return &pdfapi.PdfExportMetadata{
-		TaskId:   metadata.TaskID,
-		FileName: metadata.FileName,
-		MimeType: metadata.MimeType,
-		Status:   metadata.Status,
-	}, nil
-}
-
-func (h *PdfHandler) DownloadPdfExport(req *pdfapi.PdfDownloadRequest, stream pdfapi.PdfService_DownloadPdfExportServer) error {
-	return fmt.Errorf("DownloadPdfExport not implemented")
-}
-
-func (h *PdfHandler) DeletePdfExportRecord(ctx context.Context, req *pdfapi.DeletePdfExportRecordRequest) (*pdfapi.DeletePdfExportRecordResponse, error) {
-	if req.Id == 0 {
-		return nil, status.Error(codes.InvalidArgument, "Id is required")
-	}
-	opts, err := options.NewDeleteOptions(ctx, []int64{req.Id})
-	if err != nil {
-		return nil, err
-	}
-
-	err = h.service.DeleteRecord(ctx, opts, req.Id)
-	if err != nil {
-		return nil, err
-	}
-	return &pdfapi.DeletePdfExportRecordResponse{Id: req.Id}, nil
 }

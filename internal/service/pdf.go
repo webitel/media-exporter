@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	pdfapi "github.com/webitel/media-exporter/api/pdf"
 	"github.com/webitel/media-exporter/internal/cache"
 	"github.com/webitel/media-exporter/internal/domain/model/options"
 	domain "github.com/webitel/media-exporter/internal/domain/model/pdf"
@@ -16,8 +15,15 @@ import (
 )
 
 type PdfService interface {
-	GetHistory(ctx context.Context, reqOpts *domain.PdfHistoryRequestOptions) (*domain.HistoryResponse, error)
+	// Screenrecording methods
 	GenerateExport(ctx context.Context, opts *options.CreateOptions, req *domain.GenerateExportRequest) (*domain.PdfExportMetadata, error)
+	GetHistory(ctx context.Context, reqOpts *domain.PdfHistoryRequestOptions) (*domain.HistoryResponse, error)
+
+	// Call methods
+	GenerateCallExport(ctx context.Context, opts *options.CreateOptions, req *domain.GenerateCallExportRequest) (*domain.PdfExportMetadata, error)
+	GetCallHistory(ctx context.Context, reqOpts *domain.CallHistoryRequestOptions) (*domain.HistoryResponse, error)
+
+	// Common
 	DeleteRecord(ctx context.Context, opts *options.DeleteOptions, recordID int64) error
 }
 
@@ -28,73 +34,103 @@ type PdfServiceImpl struct {
 }
 
 func NewPdfService(s store.PdfStore, c cache.Cache, log *slog.Logger) (PdfService, error) {
-	if s == nil {
+	if s == nil || c == nil {
 		return nil, errors.Internal("store or cache is nil in PdfService")
 	}
 	return &PdfServiceImpl{store: s, cache: c, log: log}, nil
 }
 
+// --- Screenrecording Exports ---
+
+func (s *PdfServiceImpl) GenerateExport(ctx context.Context, opts *options.CreateOptions, req *domain.GenerateExportRequest) (*domain.PdfExportMetadata, error) {
+	if req.AgentID == 0 {
+		return nil, errors.BadRequest("agent_id is required")
+	}
+	// Logic moved to a helper to reuse code between Call and Screenrecording
+	return s.createExportTask(ctx, opts, domain.ChannelScreenRecording, req.AgentID, "", req.FileIDs, req.From, req.To)
+}
+
 func (s *PdfServiceImpl) GetHistory(ctx context.Context, req *domain.PdfHistoryRequestOptions) (*domain.HistoryResponse, error) {
 	if req.AgentID == 0 {
-		return nil, fmt.Errorf("agent_id is required")
+		return nil, errors.BadRequest("agent_id is required")
 	}
-
 	return s.store.GetPdfExportHistory(req)
 }
 
-func (s *PdfServiceImpl) GenerateExport(
+// --- Call Exports ---
+
+func (s *PdfServiceImpl) GenerateCallExport(ctx context.Context, opts *options.CreateOptions, req *domain.GenerateCallExportRequest) (*domain.PdfExportMetadata, error) {
+	if req.CallID == "" {
+		return nil, errors.BadRequest("call_id is required")
+	}
+	return s.createExportTask(ctx, opts, domain.ChannelCall, 0, req.CallID, req.FileIDs, req.From, req.To)
+}
+
+func (s *PdfServiceImpl) GetCallHistory(ctx context.Context, req *domain.CallHistoryRequestOptions) (*domain.HistoryResponse, error) {
+	if req.CallID == "" {
+		return nil, errors.BadRequest("call_id is required")
+	}
+	return s.store.GetCallPdfExportHistory(req)
+}
+
+// --- General ---
+
+func (s *PdfServiceImpl) DeleteRecord(ctx context.Context, opts *options.DeleteOptions, recordID int64) error {
+	if recordID == 0 {
+		return errors.BadRequest("id is required for delete operation")
+	}
+	return s.store.DeletePdfExportRecord(opts, recordID)
+}
+
+// --- Internal Helper ---
+
+func (s *PdfServiceImpl) createExportTask(
 	ctx context.Context,
 	opts *options.CreateOptions,
-	req *domain.GenerateExportRequest,
+	channel domain.ExportChannel,
+	agentID int64,
+	callID string,
+	fileIDs []int64,
+	from, to int64,
 ) (*domain.PdfExportMetadata, error) {
-	if req.AgentID == 0 {
-		return nil, fmt.Errorf("agent_id is required")
-	}
-
 	now := time.Now()
 
-	var channelStr domain.ExportChannel
-	switch req.Channel {
-	case int32(pdfapi.PdfChannel_CALL):
-		channelStr = domain.ChannelCall
-	case int32(pdfapi.PdfChannel_SCREENRECORDING):
-		channelStr = domain.ChannelScreenRecording
-	default:
-		channelStr = domain.ChannelUnknown
-	}
-
-	fileName := fmt.Sprintf("pdf_%s_%d_%04d-%02d-%02d_%02d_%02d_%02d.pdf",
-		channelStr,
+	// Generate a meaningful task identifier
+	// Example: pdf_CALL_user123_2023-10-27_10_20_30
+	fileName := fmt.Sprintf("pdf_%s_%d_%s.pdf",
+		channel,
 		opts.Auth.GetUserId(),
-		now.Year(), now.Month(), now.Day(),
-		now.Hour(), now.Minute(), now.Second(),
+		now.Format("2006-01-02_15_04_05"),
 	)
 
 	taskID := fileName
-	s.log.InfoContext(ctx, "GeneratePdfExport taskID", "taskID", taskID)
 
+	// Check if task is already running in cache
 	status, err := s.cache.GetExportStatus(taskID)
 	if err != nil && !errors.Is(err, redis.Nil) {
 		return nil, fmt.Errorf("failed to get task status: %w", err)
 	}
 	if status == "pending" || status == "processing" {
-		return nil, fmt.Errorf("task already in progress: %s", taskID)
+		return nil, errors.BadRequest(fmt.Sprintf("task already in progress: %s", taskID))
 	}
-	if exists, err := s.cache.Exists(taskID); err != nil {
-		return nil, fmt.Errorf("failed to check task existence: %w", err)
-	} else if exists {
-		return nil, fmt.Errorf("task already in progress: %s", taskID)
+
+	// Prepare history record for DB
+	var fileID int64
+	if len(fileIDs) > 0 {
+		fileID = fileIDs[0]
 	}
 
 	history := &domain.NewExportHistory{
-		Name:       fmt.Sprintf("%s.pdf", taskID),
+		Name:       fileName,
 		Mime:       "application/pdf",
 		UploadedAt: opts.Time.UnixMilli(),
 		UploadedBy: opts.Auth.GetUserId(),
 		Status:     "pending",
-		AgentID:    req.AgentID,
-		FileID:     req.FileIDs[0],
+		AgentID:    agentID,
+		CallID:     callID, // Ensure your domain model supports CallID
+		FileID:     fileID,
 	}
+
 	historyID, err := s.store.InsertPdfExportHistory(opts, history)
 	if err != nil {
 		return nil, fmt.Errorf("insert history failed: %w", err)
@@ -104,16 +140,18 @@ func (s *PdfServiceImpl) GenerateExport(
 		return nil, fmt.Errorf("cache set historyID failed: %w", err)
 	}
 
+	// Prepare task for Redis Queue
 	task := domain.ExportTask{
 		TaskID:   taskID,
-		AgentID:  req.AgentID,
+		AgentID:  agentID,
+		CallID:   callID,
 		UserID:   opts.Auth.GetUserId(),
 		DomainID: opts.Auth.GetDomainId(),
-		Channel:  string(channelStr),
-		From:     req.From,
-		To:       req.To,
+		Channel:  string(channel),
+		From:     from,
+		To:       to,
 		Headers:  domain.ExtractHeadersFromContext(ctx, []string{"authorization", "x-req-id", "x-webitel-access"}),
-		IDs:      req.FileIDs,
+		IDs:      fileIDs,
 		Type:     domain.PdfExportType,
 	}
 
@@ -121,8 +159,7 @@ func (s *PdfServiceImpl) GenerateExport(
 		return nil, fmt.Errorf("push task failed: %w", err)
 	}
 
-	// >>> ADD LOG HERE <<<
-	s.log.InfoContext(ctx, "PUSHED TASK TO REDIS QUEUE", "taskID", taskID)
+	s.log.InfoContext(ctx, "PUSHED TASK TO REDIS QUEUE", "taskID", taskID, "channel", channel)
 
 	if err := s.cache.SetExportStatus(taskID, "pending"); err != nil {
 		return nil, fmt.Errorf("cache set status failed: %w", err)
@@ -134,12 +171,4 @@ func (s *PdfServiceImpl) GenerateExport(
 		MimeType: history.Mime,
 		Status:   "pending",
 	}, nil
-}
-
-func (s *PdfServiceImpl) DeleteRecord(ctx context.Context, opts *options.DeleteOptions, recordID int64) error {
-	if recordID == 0 {
-		return fmt.Errorf("id is required for delete operation")
-	}
-
-	return s.store.DeletePdfExportRecord(opts, recordID)
 }

@@ -23,28 +23,12 @@ func Forbidden(msg string, wrappers ...Wrapper) error {
 	return New(msg, append(wrappers, WithCode(codes.PermissionDenied))...)
 }
 
-func Unauthenticated(msg string, wrappers ...Wrapper) error {
-	return New(msg, append(wrappers, WithCode(codes.Unauthenticated))...)
-}
-
-func NotFound(msg string, wrappers ...Wrapper) error {
-	return New(msg, append(wrappers, WithCode(codes.NotFound))...)
-}
-
-func InvalidArgument(msg string, wrappers ...Wrapper) error {
+func BadRequest(msg string, wrappers ...Wrapper) error {
 	return New(msg, append(wrappers, WithCode(codes.InvalidArgument))...)
-}
-
-func Aborted(msg string, wrappers ...Wrapper) error {
-	return New(msg, append(wrappers, WithCode(codes.Aborted))...)
 }
 
 func Internal(msg string, wrappers ...Wrapper) error {
 	return New(msg, append(wrappers, WithCode(codes.Internal))...)
-}
-
-func Unavailable(msg string, wrappers ...Wrapper) error {
-	return New(msg, append(wrappers, WithCode(codes.Unavailable))...)
 }
 
 // Wrap adds context to errors by applying Wrappers.
@@ -69,27 +53,6 @@ func Wrap(err error, wrappers ...Wrapper) error {
 // Prepend is a convenience function for the PrependMessage wrapper.
 func Prepend(err error, msg string, wrappers ...Wrapper) error {
 	return Wrap(err, append(wrappers, PrependMessage(msg))...)
-}
-
-// Prependf is a convenience function for the PrependMessagef wrapper.
-// The args can be format arguments mixed with Wrappers.
-func Prependf(err error, format string, args ...interface{}) error {
-	fmtArgs, wrappers := splitWrappers(args)
-
-	return Wrap(err, append(wrappers, PrependMessagef(format, fmtArgs...))...)
-}
-
-// Append is a convenience function for the AppendMessage wrapper.
-func Append(err error, msg string, wrappers ...Wrapper) error {
-	return Wrap(err, append(wrappers, AppendMessage(msg))...)
-}
-
-// Appendf is a convenience function for the AppendMessagef wrapper.
-// The args can be format arguments mixed with Wrappers.
-func Appendf(err error, format string, args ...interface{}) error {
-	fmtArgs, wrappers := splitWrappers(args)
-
-	return Wrap(err, append(wrappers, AppendMessagef(format, fmtArgs...))...)
 }
 
 func ID(err error) string {
@@ -212,22 +175,4 @@ func Values(err error) map[interface{}]interface{} {
 	}
 
 	return values
-}
-
-func splitWrappers(args []interface{}) ([]interface{}, []Wrapper) {
-	var wrappers []Wrapper
-
-	// pull out the args which are wrappers
-	n := 0
-	for _, arg := range args {
-		if w, ok := arg.(Wrapper); ok {
-			wrappers = append(wrappers, w)
-		} else {
-			args[n] = arg
-			n++
-		}
-	}
-	args = args[:n]
-
-	return args, wrappers
 }

@@ -2,15 +2,10 @@ package util
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"io"
 	"os"
 	"strings"
 
 	"github.com/disintegration/imaging"
-	pdfapi "github.com/webitel/media-exporter/api/pdf"
-	"github.com/webitel/media-exporter/api/storage"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -36,32 +31,6 @@ func ResizeImage(path string, width int) error {
 	}
 	resized := imaging.Resize(img, width, 0, imaging.Lanczos)
 	return imaging.Save(resized, path)
-}
-
-// streamDownloadFile streams file chunks via gRPC to the client
-// Deprecated
-func StreamDownloadFile(ctx context.Context, client storage.FileServiceClient, req *pdfapi.PdfDownloadRequest, stream pdfapi.PdfService_DownloadPdfExportServer) error {
-	s, err := client.DownloadFile(ctx, &storage.DownloadFileRequest{
-		Id:       req.GetFileId(),
-		DomainId: req.GetDomainId(),
-	})
-	if err != nil {
-		return fmt.Errorf("init download stream failed: %w", err)
-	}
-	for {
-		chunk, err := s.Recv()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-
-			return fmt.Errorf("recv chunk failed: %w", err)
-		}
-		if err := stream.Send(&pdfapi.PdfExportChunk{Data: chunk.GetChunk()}); err != nil {
-			return fmt.Errorf("send chunk failed: %w", err)
-		}
-	}
-	return nil
 }
 
 func SavePDFToTemp(path string, pdfBytes []byte) error {

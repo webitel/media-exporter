@@ -16,38 +16,74 @@ const (
 	ChannelUnknown         ExportChannel = "unknown"
 )
 
-type GenerateExportRequest struct {
-	AgentID  int64
-	FileIDs  []int64
-	Channel  int32
-	From, To int64
+// UpdateExportStatus is used to change the status of an export
+// and attach the final file reference after processing.
+type UpdateExportStatus struct {
+	ID        int64  `db:"id"`
+	FileID    *int64 `db:"file_id"` // Reference to the generated file in storage
+	Status    string `db:"status"`  // New status (e.g., "done", "failed")
+	Size      int64  `db:"size"`    // Final file size in bytes
+	UpdatedBy int64  `db:"updated_by"`
+	UpdatedAt int64  `db:"updated_at"`
 }
 
-type ExportHistory struct {
-	ID         int64        `db:"id"`
-	Name       string       `db:"name"`
-	FileID     int64        `db:"file_id"`
-	Mime       string       `db:"mime"`
-	UploadedAt int64        `db:"uploaded_at"`
-	UpdatedAt  int64        `db:"updated_at"`
-	UploadedBy int64        `db:"uploaded_by"`
-	UpdatedBy  int64        `db:"updated_by"`
-	Status     ExportStatus `db:"status"`
-	AgentID    int64        `db:"agent_id"`
-	DomainID   int64        `db:"dc"`
+const PdfExportType = "pdf"
+
+// --- Request Models ---
+
+// GenerateExportRequest used for Screenrecording
+type GenerateExportRequest struct {
+	AgentID int64
+	FileIDs []int64
+	From    int64
+	To      int64
 }
-type UpdateExportStatus struct {
-	ID        int64        `db:"id"`
-	FileID    *int64       `db:"file_id"`
-	Status    ExportStatus `db:"status"`
-	UpdatedBy int64        `db:"updated_by"`
+
+// GenerateCallExportRequest used for Calls
+type GenerateCallExportRequest struct {
+	CallID  string
+	FileIDs []int64
+	From    int64
+	To      int64
 }
+
+type PdfHistoryRequestOptions struct {
+	AgentID int64
+	Page    int32
+	Size    int32
+}
+
+type CallHistoryRequestOptions struct {
+	CallID string
+	Page   int32
+	Size   int32
+}
+
+// --- Task & Metadata Models ---
+
+type ExportTask struct {
+	TaskID   string            `json:"task_id"`
+	AgentID  int64             `json:"agent_id,omitempty"`
+	CallID   string            `json:"call_id,omitempty"`
+	UserID   int64             `json:"user_id"`
+	DomainID int64             `json:"domain_id"`
+	Channel  string            `json:"channel"`
+	From     int64             `json:"from"`
+	To       int64             `json:"to"`
+	Headers  map[string]string `json:"headers"`
+	IDs      []int64           `json:"ids"`
+	Type     string            `json:"type"`
+}
+
 type PdfExportMetadata struct {
 	TaskID   string `db:"task_id"`
 	FileName string `db:"file_name"`
 	MimeType string `db:"mime_type"`
 	Status   string `db:"status"`
+	Size     int64  `db:"size"`
 }
+
+// --- Persistence Models (Storage/DB) ---
 
 type NewExportHistory struct {
 	Name       string `db:"name"`
@@ -55,27 +91,9 @@ type NewExportHistory struct {
 	UploadedAt int64  `db:"uploaded_at"`
 	UploadedBy int64  `db:"uploaded_by"`
 	Status     string `db:"status"`
-	AgentID    int64  `db:"agent_id"`
+	AgentID    int64  `db:"agent_id,omitempty"`
+	CallID     string `db:"call_id,omitempty"`
 	FileID     int64  `db:"file_id"`
-}
-
-type ExportTask struct {
-	TaskID   string            `db:"task_id"`
-	AgentID  int64             `db:"agent_id"`
-	UserID   int64             `db:"user_id"`
-	DomainID int64             `db:"domain_id"`
-	Channel  string            `db:"channel"`
-	From     int64             `db:"from"`
-	To       int64             `db:"to"`
-	Headers  map[string]string `json:"headers"`
-	IDs      []int64           `db:"ids"`
-	Type     string            `db:"type"`
-}
-
-type PdfHistoryRequestOptions struct {
-	AgentID int64 `db:"agent_id"`
-	Page    int64 `db:"page"`
-	Size    int64 `db:"size"`
 }
 
 type HistoryRecord struct {
@@ -96,7 +114,7 @@ type HistoryResponse struct {
 	Next  bool             `db:"next"`
 }
 
-const PdfExportType = "pdf"
+// --- Utils ---
 
 func ExtractHeadersFromContext(ctx context.Context, keys []string) map[string]string {
 	headers := make(map[string]string, len(keys))

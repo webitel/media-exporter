@@ -38,7 +38,6 @@ func (app *App) StartExportWorker(ctx context.Context) {
 					return
 				default:
 					task, err := app.Cache.PopExportTask()
-					slog.InfoContext(ctx, "export task received", "task", task)
 					if err != nil {
 						time.Sleep(time.Second)
 						continue
@@ -54,7 +53,6 @@ func (app *App) StartExportWorker(ctx context.Context) {
 					switch task.Type {
 
 					case PdfExportType:
-						slog.InfoContext(ctx, "Worker started processing PDF task", "taskID", task.TaskID)
 						if err := app.HandlePdfTask(ctx, session, task); err != nil {
 							slog.ErrorContext(ctx, "PDF task failed", "taskID", task.TaskID, "error", err)
 							_ = app.Cache.ClearExportTask(task.TaskID)

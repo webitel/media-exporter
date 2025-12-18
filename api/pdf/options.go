@@ -32,46 +32,57 @@ var WebitelAPI = WebitelServicesInfo{
 		ObjClass:           "",
 		AdditionalLicenses: []string{},
 		WebitelMethods: map[string]WebitelMethod{
-			"GeneratePdfExport": WebitelMethod{
+			"CreateScreenrecordingExport": WebitelMethod{
 				Access: 0,
-				Input:  "PdfGenerateRequest",
-				Output: "PdfExportMetadata",
+				Input:  "CreateScreenrecordingRequest",
+				Output: "ExportTask",
 				HttpBindings: []*HttpBinding{
 					{
-						Path:   "/export/pdf/{agent_id}",
+						Path:   "/agents/{agent_id}/exports/pdf/screenrecordings",
 						Method: "POST",
 					},
 				},
 			},
-			"DownloadPdfExport": WebitelMethod{
+			"ListScreenrecordingExports": WebitelMethod{
 				Access: 0,
-				Input:  "PdfDownloadRequest",
-				Output: "PdfExportChunk",
+				Input:  "ListScreenrecordingHistoryRequest",
+				Output: "ListExportsResponse",
 				HttpBindings: []*HttpBinding{
 					{
-						Path:   "/export/pdf/{file_id}",
+						Path:   "/agents/{agent_id}/exports/pdf/screenrecordings",
 						Method: "GET",
 					},
 				},
 			},
-			"GetPdfExportHistory": WebitelMethod{
+			"CreateCallExport": WebitelMethod{
 				Access: 0,
-				Input:  "PdfHistoryRequest",
-				Output: "PdfHistoryResponse",
+				Input:  "CreateCallExportRequest",
+				Output: "ExportTask",
 				HttpBindings: []*HttpBinding{
 					{
-						Path:   "/export/pdf/{agent_id}/history",
+						Path:   "/calls/{call_id}/exports/pdf",
+						Method: "POST",
+					},
+				},
+			},
+			"ListCallExports": WebitelMethod{
+				Access: 0,
+				Input:  "ListCallHistoryRequest",
+				Output: "ListExportsResponse",
+				HttpBindings: []*HttpBinding{
+					{
+						Path:   "/calls/{call_id}/exports/pdf",
 						Method: "GET",
 					},
 				},
 			},
-			"DeletePdfExportRecord": WebitelMethod{
+			"DeleteExport": WebitelMethod{
 				Access: 0,
-				Input:  "DeletePdfExportRecordRequest",
-				Output: "DeletePdfExportRecordResponse",
+				Input:  "DeleteExportRequest",
+				Output: "DeleteExportResponse",
 				HttpBindings: []*HttpBinding{
 					{
-						Path:   "/export/pdf/history/{id}",
+						Path:   "/exports/pdf/history/{id}",
 						Method: "DELETE",
 					},
 				},
