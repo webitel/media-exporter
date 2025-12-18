@@ -22,132 +22,87 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type PdfChannel int32
+// Status of the PDF generation process.
+type ExportStatus int32
 
 const (
-	PdfChannel_CALL            PdfChannel = 0
-	PdfChannel_SCREENRECORDING PdfChannel = 1
+	ExportStatus_EXPORT_STATUS_UNSPECIFIED ExportStatus = 0
+	ExportStatus_PENDING                   ExportStatus = 1 // Task is queued and waiting for a worker.
+	ExportStatus_PROCESSING                ExportStatus = 2 // PDF is currently being rendered.
+	ExportStatus_DONE                      ExportStatus = 3 // Export finished successfully.
+	ExportStatus_FAILED                    ExportStatus = 4 // Export failed during generation.
 )
 
-// Enum value maps for PdfChannel.
+// Enum value maps for ExportStatus.
 var (
-	PdfChannel_name = map[int32]string{
-		0: "CALL",
-		1: "SCREENRECORDING",
+	ExportStatus_name = map[int32]string{
+		0: "EXPORT_STATUS_UNSPECIFIED",
+		1: "PENDING",
+		2: "PROCESSING",
+		3: "DONE",
+		4: "FAILED",
 	}
-	PdfChannel_value = map[string]int32{
-		"CALL":            0,
-		"SCREENRECORDING": 1,
+	ExportStatus_value = map[string]int32{
+		"EXPORT_STATUS_UNSPECIFIED": 0,
+		"PENDING":                   1,
+		"PROCESSING":                2,
+		"DONE":                      3,
+		"FAILED":                    4,
 	}
 )
 
-func (x PdfChannel) Enum() *PdfChannel {
-	p := new(PdfChannel)
+func (x ExportStatus) Enum() *ExportStatus {
+	p := new(ExportStatus)
 	*p = x
 	return p
 }
 
-func (x PdfChannel) String() string {
+func (x ExportStatus) String() string {
 	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
 }
 
-func (PdfChannel) Descriptor() protoreflect.EnumDescriptor {
+func (ExportStatus) Descriptor() protoreflect.EnumDescriptor {
 	return file_pdf_proto_enumTypes[0].Descriptor()
 }
 
-func (PdfChannel) Type() protoreflect.EnumType {
+func (ExportStatus) Type() protoreflect.EnumType {
 	return &file_pdf_proto_enumTypes[0]
 }
 
-func (x PdfChannel) Number() protoreflect.EnumNumber {
+func (x ExportStatus) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use PdfChannel.Descriptor instead.
-func (PdfChannel) EnumDescriptor() ([]byte, []int) {
+// Deprecated: Use ExportStatus.Descriptor instead.
+func (ExportStatus) EnumDescriptor() ([]byte, []int) {
 	return file_pdf_proto_rawDescGZIP(), []int{0}
 }
 
-// Status of the PDF export process.
-type PdfExportStatus int32
-
-const (
-	PdfExportStatus_PDF_EXPORT_STATUS_UNSPECIFIED PdfExportStatus = 0 // Default value.
-	PdfExportStatus_PDF_EXPORT_STATUS_PENDING     PdfExportStatus = 1 // Task is waiting to start.
-	PdfExportStatus_PDF_EXPORT_STATUS_PROCESSING  PdfExportStatus = 2 // Task is in progress.
-	PdfExportStatus_PDF_EXPORT_STATUS_DONE        PdfExportStatus = 3 // Task is completed successfully.
-	PdfExportStatus_PDF_EXPORT_STATUS_FAILED      PdfExportStatus = 4 // Task failed.
-)
-
-// Enum value maps for PdfExportStatus.
-var (
-	PdfExportStatus_name = map[int32]string{
-		0: "PDF_EXPORT_STATUS_UNSPECIFIED",
-		1: "PDF_EXPORT_STATUS_PENDING",
-		2: "PDF_EXPORT_STATUS_PROCESSING",
-		3: "PDF_EXPORT_STATUS_DONE",
-		4: "PDF_EXPORT_STATUS_FAILED",
-	}
-	PdfExportStatus_value = map[string]int32{
-		"PDF_EXPORT_STATUS_UNSPECIFIED": 0,
-		"PDF_EXPORT_STATUS_PENDING":     1,
-		"PDF_EXPORT_STATUS_PROCESSING":  2,
-		"PDF_EXPORT_STATUS_DONE":        3,
-		"PDF_EXPORT_STATUS_FAILED":      4,
-	}
-)
-
-func (x PdfExportStatus) Enum() *PdfExportStatus {
-	p := new(PdfExportStatus)
-	*p = x
-	return p
-}
-
-func (x PdfExportStatus) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (PdfExportStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_pdf_proto_enumTypes[1].Descriptor()
-}
-
-func (PdfExportStatus) Type() protoreflect.EnumType {
-	return &file_pdf_proto_enumTypes[1]
-}
-
-func (x PdfExportStatus) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use PdfExportStatus.Descriptor instead.
-func (PdfExportStatus) EnumDescriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{1}
-}
-
-type PdfGenerateCallPdfRequest struct {
+// Request for generating a screen recording PDF.
+type CreateScreenrecordingRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CallId        string                 `protobuf:"bytes,1,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
-	From          int64                  `protobuf:"varint,3,opt,name=from,proto3" json:"from,omitempty"`                             // Start timestamp (Unix millis).
-	To            int64                  `protobuf:"varint,4,opt,name=to,proto3" json:"to,omitempty"`                                 // End timestamp (Unix millis).
-	FileIds       []int64                `protobuf:"varint,5,rep,packed,name=file_ids,json=fileIds,proto3" json:"file_ids,omitempty"` // Optional list of specific file IDs to include.
+	AgentId       int64                  `protobuf:"varint,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`        // Unique identifier of the agent.
+	From          int64                  `protobuf:"varint,2,opt,name=from,proto3" json:"from,omitempty"`                             // Start timestamp of the range (Unix millis).
+	To            int64                  `protobuf:"varint,3,opt,name=to,proto3" json:"to,omitempty"`                                 // End timestamp of the range (Unix millis).
+	FileIds       []int64                `protobuf:"varint,4,rep,packed,name=file_ids,json=fileIds,proto3" json:"file_ids,omitempty"` // Optional: specific file IDs to include in the PDF.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *PdfGenerateCallPdfRequest) Reset() {
-	*x = PdfGenerateCallPdfRequest{}
+func (x *CreateScreenrecordingRequest) Reset() {
+	*x = CreateScreenrecordingRequest{}
 	mi := &file_pdf_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *PdfGenerateCallPdfRequest) String() string {
+func (x *CreateScreenrecordingRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PdfGenerateCallPdfRequest) ProtoMessage() {}
+func (*CreateScreenrecordingRequest) ProtoMessage() {}
 
-func (x *PdfGenerateCallPdfRequest) ProtoReflect() protoreflect.Message {
+func (x *CreateScreenrecordingRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_pdf_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -159,62 +114,64 @@ func (x *PdfGenerateCallPdfRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PdfGenerateCallPdfRequest.ProtoReflect.Descriptor instead.
-func (*PdfGenerateCallPdfRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreateScreenrecordingRequest.ProtoReflect.Descriptor instead.
+func (*CreateScreenrecordingRequest) Descriptor() ([]byte, []int) {
 	return file_pdf_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *PdfGenerateCallPdfRequest) GetCallId() string {
+func (x *CreateScreenrecordingRequest) GetAgentId() int64 {
 	if x != nil {
-		return x.CallId
+		return x.AgentId
 	}
-	return ""
+	return 0
 }
 
-func (x *PdfGenerateCallPdfRequest) GetFrom() int64 {
+func (x *CreateScreenrecordingRequest) GetFrom() int64 {
 	if x != nil {
 		return x.From
 	}
 	return 0
 }
 
-func (x *PdfGenerateCallPdfRequest) GetTo() int64 {
+func (x *CreateScreenrecordingRequest) GetTo() int64 {
 	if x != nil {
 		return x.To
 	}
 	return 0
 }
 
-func (x *PdfGenerateCallPdfRequest) GetFileIds() []int64 {
+func (x *CreateScreenrecordingRequest) GetFileIds() []int64 {
 	if x != nil {
 		return x.FileIds
 	}
 	return nil
 }
 
-type PdfCallPdfHistoryRequest struct {
+// Request for generating a call media PDF.
+type CreateCallExportRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CallId        string                 `protobuf:"bytes,1,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
-	Page          int32                  `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"`
-	Size          int32                  `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"`
+	CallId        string                 `protobuf:"bytes,1,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`            // Unique identifier of the call.
+	From          int64                  `protobuf:"varint,3,opt,name=from,proto3" json:"from,omitempty"`                             // Start timestamp of the range (Unix millis).
+	To            int64                  `protobuf:"varint,4,opt,name=to,proto3" json:"to,omitempty"`                                 // End timestamp of the range (Unix millis).
+	FileIds       []int64                `protobuf:"varint,5,rep,packed,name=file_ids,json=fileIds,proto3" json:"file_ids,omitempty"` // Optional: specific file IDs to include in the PDF.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *PdfCallPdfHistoryRequest) Reset() {
-	*x = PdfCallPdfHistoryRequest{}
+func (x *CreateCallExportRequest) Reset() {
+	*x = CreateCallExportRequest{}
 	mi := &file_pdf_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *PdfCallPdfHistoryRequest) String() string {
+func (x *CreateCallExportRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PdfCallPdfHistoryRequest) ProtoMessage() {}
+func (*CreateCallExportRequest) ProtoMessage() {}
 
-func (x *PdfCallPdfHistoryRequest) ProtoReflect() protoreflect.Message {
+func (x *CreateCallExportRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_pdf_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -226,53 +183,63 @@ func (x *PdfCallPdfHistoryRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PdfCallPdfHistoryRequest.ProtoReflect.Descriptor instead.
-func (*PdfCallPdfHistoryRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreateCallExportRequest.ProtoReflect.Descriptor instead.
+func (*CreateCallExportRequest) Descriptor() ([]byte, []int) {
 	return file_pdf_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *PdfCallPdfHistoryRequest) GetCallId() string {
+func (x *CreateCallExportRequest) GetCallId() string {
 	if x != nil {
 		return x.CallId
 	}
 	return ""
 }
 
-func (x *PdfCallPdfHistoryRequest) GetPage() int32 {
+func (x *CreateCallExportRequest) GetFrom() int64 {
 	if x != nil {
-		return x.Page
+		return x.From
 	}
 	return 0
 }
 
-func (x *PdfCallPdfHistoryRequest) GetSize() int32 {
+func (x *CreateCallExportRequest) GetTo() int64 {
 	if x != nil {
-		return x.Size
+		return x.To
 	}
 	return 0
 }
 
-type DeletePdfExportRecordRequest struct {
+func (x *CreateCallExportRequest) GetFileIds() []int64 {
+	if x != nil {
+		return x.FileIds
+	}
+	return nil
+}
+
+// Request for retrieving paginated export history for an agent.
+type ListScreenrecordingHistoryRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	AgentId       int64                  `protobuf:"varint,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Page          int32                  `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"` // Page number (1-based).
+	Size          int32                  `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"` // Number of items per page.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *DeletePdfExportRecordRequest) Reset() {
-	*x = DeletePdfExportRecordRequest{}
+func (x *ListScreenrecordingHistoryRequest) Reset() {
+	*x = ListScreenrecordingHistoryRequest{}
 	mi := &file_pdf_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *DeletePdfExportRecordRequest) String() string {
+func (x *ListScreenrecordingHistoryRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DeletePdfExportRecordRequest) ProtoMessage() {}
+func (*ListScreenrecordingHistoryRequest) ProtoMessage() {}
 
-func (x *DeletePdfExportRecordRequest) ProtoReflect() protoreflect.Message {
+func (x *ListScreenrecordingHistoryRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_pdf_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -284,39 +251,56 @@ func (x *DeletePdfExportRecordRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DeletePdfExportRecordRequest.ProtoReflect.Descriptor instead.
-func (*DeletePdfExportRecordRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListScreenrecordingHistoryRequest.ProtoReflect.Descriptor instead.
+func (*ListScreenrecordingHistoryRequest) Descriptor() ([]byte, []int) {
 	return file_pdf_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *DeletePdfExportRecordRequest) GetId() int64 {
+func (x *ListScreenrecordingHistoryRequest) GetAgentId() int64 {
 	if x != nil {
-		return x.Id
+		return x.AgentId
 	}
 	return 0
 }
 
-type DeletePdfExportRecordResponse struct {
+func (x *ListScreenrecordingHistoryRequest) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ListScreenrecordingHistoryRequest) GetSize() int32 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+// Request for retrieving paginated export history for a call.
+type ListCallHistoryRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	CallId        string                 `protobuf:"bytes,1,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
+	Page          int32                  `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"` // Page number (1-based).
+	Size          int32                  `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"` // Number of items per page.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *DeletePdfExportRecordResponse) Reset() {
-	*x = DeletePdfExportRecordResponse{}
+func (x *ListCallHistoryRequest) Reset() {
+	*x = ListCallHistoryRequest{}
 	mi := &file_pdf_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *DeletePdfExportRecordResponse) String() string {
+func (x *ListCallHistoryRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DeletePdfExportRecordResponse) ProtoMessage() {}
+func (*ListCallHistoryRequest) ProtoMessage() {}
 
-func (x *DeletePdfExportRecordResponse) ProtoReflect() protoreflect.Message {
+func (x *ListCallHistoryRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_pdf_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -328,44 +312,56 @@ func (x *DeletePdfExportRecordResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DeletePdfExportRecordResponse.ProtoReflect.Descriptor instead.
-func (*DeletePdfExportRecordResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListCallHistoryRequest.ProtoReflect.Descriptor instead.
+func (*ListCallHistoryRequest) Descriptor() ([]byte, []int) {
 	return file_pdf_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *DeletePdfExportRecordResponse) GetId() int64 {
+func (x *ListCallHistoryRequest) GetCallId() string {
 	if x != nil {
-		return x.Id
+		return x.CallId
+	}
+	return ""
+}
+
+func (x *ListCallHistoryRequest) GetPage() int32 {
+	if x != nil {
+		return x.Page
 	}
 	return 0
 }
 
-// Request for generating a PDF export.
-type ScreenrecordingPdfGenerateRequest struct {
+func (x *ListCallHistoryRequest) GetSize() int32 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+// Response containing a page of export history records.
+type ListExportsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	AgentId       int64                  `protobuf:"varint,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`                         // Agent ID for which the export is generated.
-	Channel       PdfChannel             `protobuf:"varint,2,opt,name=channel,proto3,enum=webitel_media_exporter.PdfChannel" json:"channel,omitempty"` // Channel type (e.g., "screenshot").
-	From          int64                  `protobuf:"varint,3,opt,name=from,proto3" json:"from,omitempty"`                                              // Start timestamp (Unix millis).
-	To            int64                  `protobuf:"varint,4,opt,name=to,proto3" json:"to,omitempty"`                                                  // End timestamp (Unix millis).
-	FileIds       []int64                `protobuf:"varint,5,rep,packed,name=file_ids,json=fileIds,proto3" json:"file_ids,omitempty"`                  // Optional list of specific file IDs to include.
+	Page          int32                  `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`  // Current page number.
+	Next          bool                   `protobuf:"varint,2,opt,name=next,proto3" json:"next,omitempty"`  // Indicates if there are more records available.
+	Items         []*ExportRecord        `protobuf:"bytes,3,rep,name=items,proto3" json:"items,omitempty"` // List of export records.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ScreenrecordingPdfGenerateRequest) Reset() {
-	*x = ScreenrecordingPdfGenerateRequest{}
+func (x *ListExportsResponse) Reset() {
+	*x = ListExportsResponse{}
 	mi := &file_pdf_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ScreenrecordingPdfGenerateRequest) String() string {
+func (x *ListExportsResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ScreenrecordingPdfGenerateRequest) ProtoMessage() {}
+func (*ListExportsResponse) ProtoMessage() {}
 
-func (x *ScreenrecordingPdfGenerateRequest) ProtoReflect() protoreflect.Message {
+func (x *ListExportsResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_pdf_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -377,374 +373,59 @@ func (x *ScreenrecordingPdfGenerateRequest) ProtoReflect() protoreflect.Message 
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ScreenrecordingPdfGenerateRequest.ProtoReflect.Descriptor instead.
-func (*ScreenrecordingPdfGenerateRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListExportsResponse.ProtoReflect.Descriptor instead.
+func (*ListExportsResponse) Descriptor() ([]byte, []int) {
 	return file_pdf_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *ScreenrecordingPdfGenerateRequest) GetAgentId() int64 {
-	if x != nil {
-		return x.AgentId
-	}
-	return 0
-}
-
-func (x *ScreenrecordingPdfGenerateRequest) GetChannel() PdfChannel {
-	if x != nil {
-		return x.Channel
-	}
-	return PdfChannel_CALL
-}
-
-func (x *ScreenrecordingPdfGenerateRequest) GetFrom() int64 {
-	if x != nil {
-		return x.From
-	}
-	return 0
-}
-
-func (x *ScreenrecordingPdfGenerateRequest) GetTo() int64 {
-	if x != nil {
-		return x.To
-	}
-	return 0
-}
-
-func (x *ScreenrecordingPdfGenerateRequest) GetFileIds() []int64 {
-	if x != nil {
-		return x.FileIds
-	}
-	return nil
-}
-
-// Request for downloading a previously generated PDF export.
-type PdfDownloadRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	FileId        int64                  `protobuf:"varint,1,opt,name=file_id,json=fileId,proto3" json:"file_id,omitempty"`       // Unique export identifier.
-	DomainId      int64                  `protobuf:"varint,2,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"` // Domain ID for authorization.
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PdfDownloadRequest) Reset() {
-	*x = PdfDownloadRequest{}
-	mi := &file_pdf_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PdfDownloadRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PdfDownloadRequest) ProtoMessage() {}
-
-func (x *PdfDownloadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PdfDownloadRequest.ProtoReflect.Descriptor instead.
-func (*PdfDownloadRequest) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *PdfDownloadRequest) GetFileId() int64 {
-	if x != nil {
-		return x.FileId
-	}
-	return 0
-}
-
-func (x *PdfDownloadRequest) GetDomainId() int64 {
-	if x != nil {
-		return x.DomainId
-	}
-	return 0
-}
-
-// Metadata about a PDF export task.
-type PdfExportMetadata struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`       // Unique identifier of the task.
-	FileName      string                 `protobuf:"bytes,2,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"` // File name of the export.
-	MimeType      string                 `protobuf:"bytes,3,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"` // MIME type, e.g., "application/pdf".
-	Status        string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`                     // Task status: pending | processing | done | failed.
-	Size          int64                  `protobuf:"varint,5,opt,name=size,proto3" json:"size,omitempty"`                        // File size in bytes (0 if not ready).
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PdfExportMetadata) Reset() {
-	*x = PdfExportMetadata{}
-	mi := &file_pdf_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PdfExportMetadata) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PdfExportMetadata) ProtoMessage() {}
-
-func (x *PdfExportMetadata) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PdfExportMetadata.ProtoReflect.Descriptor instead.
-func (*PdfExportMetadata) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *PdfExportMetadata) GetTaskId() string {
-	if x != nil {
-		return x.TaskId
-	}
-	return ""
-}
-
-func (x *PdfExportMetadata) GetFileName() string {
-	if x != nil {
-		return x.FileName
-	}
-	return ""
-}
-
-func (x *PdfExportMetadata) GetMimeType() string {
-	if x != nil {
-		return x.MimeType
-	}
-	return ""
-}
-
-func (x *PdfExportMetadata) GetStatus() string {
-	if x != nil {
-		return x.Status
-	}
-	return ""
-}
-
-func (x *PdfExportMetadata) GetSize() int64 {
-	if x != nil {
-		return x.Size
-	}
-	return 0
-}
-
-// Chunked response with PDF binary data.
-type PdfExportChunk struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Data          []byte                 `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"` // Raw PDF file bytes (chunked).
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PdfExportChunk) Reset() {
-	*x = PdfExportChunk{}
-	mi := &file_pdf_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PdfExportChunk) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PdfExportChunk) ProtoMessage() {}
-
-func (x *PdfExportChunk) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PdfExportChunk.ProtoReflect.Descriptor instead.
-func (*PdfExportChunk) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *PdfExportChunk) GetData() []byte {
-	if x != nil {
-		return x.Data
-	}
-	return nil
-}
-
-// Request for retrieving paginated history of exports.
-type PdfScreenrecordingHistoryRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AgentId       int64                  `protobuf:"varint,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"` // Agent ID.
-	Page          int32                  `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"`                      // Page number (starting from 1).
-	Size          int32                  `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"`                      // Page size (number of records per page).
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PdfScreenrecordingHistoryRequest) Reset() {
-	*x = PdfScreenrecordingHistoryRequest{}
-	mi := &file_pdf_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PdfScreenrecordingHistoryRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PdfScreenrecordingHistoryRequest) ProtoMessage() {}
-
-func (x *PdfScreenrecordingHistoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PdfScreenrecordingHistoryRequest.ProtoReflect.Descriptor instead.
-func (*PdfScreenrecordingHistoryRequest) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *PdfScreenrecordingHistoryRequest) GetAgentId() int64 {
-	if x != nil {
-		return x.AgentId
-	}
-	return 0
-}
-
-func (x *PdfScreenrecordingHistoryRequest) GetPage() int32 {
+func (x *ListExportsResponse) GetPage() int32 {
 	if x != nil {
 		return x.Page
 	}
 	return 0
 }
 
-func (x *PdfScreenrecordingHistoryRequest) GetSize() int32 {
-	if x != nil {
-		return x.Size
-	}
-	return 0
-}
-
-// Response containing a page of export history.
-type PdfHistoryResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Page          int32                  `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"` // Current page number.
-	Next          bool                   `protobuf:"varint,2,opt,name=next,proto3" json:"next,omitempty"` // True if there is a next page.
-	Data          []*PdfHistoryRecord    `protobuf:"bytes,3,rep,name=data,proto3" json:"data,omitempty"`  // List of export history records.
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PdfHistoryResponse) Reset() {
-	*x = PdfHistoryResponse{}
-	mi := &file_pdf_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PdfHistoryResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PdfHistoryResponse) ProtoMessage() {}
-
-func (x *PdfHistoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PdfHistoryResponse.ProtoReflect.Descriptor instead.
-func (*PdfHistoryResponse) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *PdfHistoryResponse) GetPage() int32 {
-	if x != nil {
-		return x.Page
-	}
-	return 0
-}
-
-func (x *PdfHistoryResponse) GetNext() bool {
+func (x *ListExportsResponse) GetNext() bool {
 	if x != nil {
 		return x.Next
 	}
 	return false
 }
 
-func (x *PdfHistoryResponse) GetData() []*PdfHistoryRecord {
+func (x *ListExportsResponse) GetItems() []*ExportRecord {
 	if x != nil {
-		return x.Data
+		return x.Items
 	}
 	return nil
 }
 
-// Represents a single PDF export record.
-type PdfHistoryRecord struct {
+// Metadata about an export task immediately after creation.
+type ExportTask struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`                                                     // Export ID.
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                                                  // Export name.
-	FileId        int64                  `protobuf:"varint,3,opt,name=file_id,json=fileId,proto3" json:"file_id,omitempty"`                               // Related file ID.
-	MimeType      string                 `protobuf:"bytes,4,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`                          // MIME type of the export.
-	CreatedAt     int64                  `protobuf:"varint,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`                      // Creation timestamp (Unix millis).
-	UpdatedAt     int64                  `protobuf:"varint,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`                      // Update timestamp (Unix millis).
-	CreatedBy     int64                  `protobuf:"varint,7,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`                      // User ID who created the export.
-	UpdatedBy     int64                  `protobuf:"varint,8,opt,name=updated_by,json=updatedBy,proto3" json:"updated_by,omitempty"`                      // User ID who last updated the export.
-	Status        PdfExportStatus        `protobuf:"varint,9,opt,name=status,proto3,enum=webitel_media_exporter.PdfExportStatus" json:"status,omitempty"` // Current export status.
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`                             // Unique ID to track the background task.
+	FileName      string                 `protobuf:"bytes,2,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`                       // Target name of the PDF file.
+	MimeType      string                 `protobuf:"bytes,3,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`                       // MIME type (usually application/pdf).
+	Status        ExportStatus           `protobuf:"varint,4,opt,name=status,proto3,enum=webitel_media_exporter.ExportStatus" json:"status,omitempty"` // Current lifecycle status of the task.
+	Size          int64                  `protobuf:"varint,5,opt,name=size,proto3" json:"size,omitempty"`                                              // File size in bytes (0 if not yet generated).
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *PdfHistoryRecord) Reset() {
-	*x = PdfHistoryRecord{}
-	mi := &file_pdf_proto_msgTypes[10]
+func (x *ExportTask) Reset() {
+	*x = ExportTask{}
+	mi := &file_pdf_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *PdfHistoryRecord) String() string {
+func (x *ExportTask) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PdfHistoryRecord) ProtoMessage() {}
+func (*ExportTask) ProtoMessage() {}
 
-func (x *PdfHistoryRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[10]
+func (x *ExportTask) ProtoReflect() protoreflect.Message {
+	mi := &file_pdf_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -755,118 +436,280 @@ func (x *PdfHistoryRecord) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PdfHistoryRecord.ProtoReflect.Descriptor instead.
-func (*PdfHistoryRecord) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{10}
+// Deprecated: Use ExportTask.ProtoReflect.Descriptor instead.
+func (*ExportTask) Descriptor() ([]byte, []int) {
+	return file_pdf_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *PdfHistoryRecord) GetId() int64 {
+func (x *ExportTask) GetTaskId() string {
 	if x != nil {
-		return x.Id
-	}
-	return 0
-}
-
-func (x *PdfHistoryRecord) GetName() string {
-	if x != nil {
-		return x.Name
+		return x.TaskId
 	}
 	return ""
 }
 
-func (x *PdfHistoryRecord) GetFileId() int64 {
+func (x *ExportTask) GetFileName() string {
 	if x != nil {
-		return x.FileId
+		return x.FileName
 	}
-	return 0
+	return ""
 }
 
-func (x *PdfHistoryRecord) GetMimeType() string {
+func (x *ExportTask) GetMimeType() string {
 	if x != nil {
 		return x.MimeType
 	}
 	return ""
 }
 
-func (x *PdfHistoryRecord) GetCreatedAt() int64 {
+func (x *ExportTask) GetStatus() ExportStatus {
+	if x != nil {
+		return x.Status
+	}
+	return ExportStatus_EXPORT_STATUS_UNSPECIFIED
+}
+
+func (x *ExportTask) GetSize() int64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+// Represents a persisted record of a PDF export.
+type ExportRecord struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`                                                  // Internal database record ID.
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                                               // Display name of the export.
+	FileId        int64                  `protobuf:"varint,3,opt,name=file_id,json=fileId,proto3" json:"file_id,omitempty"`                            // Reference to the file in the storage system.
+	MimeType      string                 `protobuf:"bytes,4,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`                       // MIME type of the generated file.
+	CreatedAt     int64                  `protobuf:"varint,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`                   // Creation timestamp (Unix millis).
+	UpdatedAt     int64                  `protobuf:"varint,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`                   // Last update timestamp (Unix millis).
+	CreatedBy     int64                  `protobuf:"varint,7,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`                   // User ID who initiated the export.
+	UpdatedBy     int64                  `protobuf:"varint,8,opt,name=updated_by,json=updatedBy,proto3" json:"updated_by,omitempty"`                   // User ID who last modified the record.
+	Status        ExportStatus           `protobuf:"varint,9,opt,name=status,proto3,enum=webitel_media_exporter.ExportStatus" json:"status,omitempty"` // Final status of the export process.
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExportRecord) Reset() {
+	*x = ExportRecord{}
+	mi := &file_pdf_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExportRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExportRecord) ProtoMessage() {}
+
+func (x *ExportRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_pdf_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExportRecord.ProtoReflect.Descriptor instead.
+func (*ExportRecord) Descriptor() ([]byte, []int) {
+	return file_pdf_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ExportRecord) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *ExportRecord) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ExportRecord) GetFileId() int64 {
+	if x != nil {
+		return x.FileId
+	}
+	return 0
+}
+
+func (x *ExportRecord) GetMimeType() string {
+	if x != nil {
+		return x.MimeType
+	}
+	return ""
+}
+
+func (x *ExportRecord) GetCreatedAt() int64 {
 	if x != nil {
 		return x.CreatedAt
 	}
 	return 0
 }
 
-func (x *PdfHistoryRecord) GetUpdatedAt() int64 {
+func (x *ExportRecord) GetUpdatedAt() int64 {
 	if x != nil {
 		return x.UpdatedAt
 	}
 	return 0
 }
 
-func (x *PdfHistoryRecord) GetCreatedBy() int64 {
+func (x *ExportRecord) GetCreatedBy() int64 {
 	if x != nil {
 		return x.CreatedBy
 	}
 	return 0
 }
 
-func (x *PdfHistoryRecord) GetUpdatedBy() int64 {
+func (x *ExportRecord) GetUpdatedBy() int64 {
 	if x != nil {
 		return x.UpdatedBy
 	}
 	return 0
 }
 
-func (x *PdfHistoryRecord) GetStatus() PdfExportStatus {
+func (x *ExportRecord) GetStatus() ExportStatus {
 	if x != nil {
 		return x.Status
 	}
-	return PdfExportStatus_PDF_EXPORT_STATUS_UNSPECIFIED
+	return ExportStatus_EXPORT_STATUS_UNSPECIFIED
+}
+
+// Request to delete a history record.
+type DeleteExportRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // ID of the record to remove.
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteExportRequest) Reset() {
+	*x = DeleteExportRequest{}
+	mi := &file_pdf_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteExportRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteExportRequest) ProtoMessage() {}
+
+func (x *DeleteExportRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_pdf_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteExportRequest.ProtoReflect.Descriptor instead.
+func (*DeleteExportRequest) Descriptor() ([]byte, []int) {
+	return file_pdf_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *DeleteExportRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+// Response confirming the deletion of a record.
+type DeleteExportResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // ID of the deleted record.
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteExportResponse) Reset() {
+	*x = DeleteExportResponse{}
+	mi := &file_pdf_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteExportResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteExportResponse) ProtoMessage() {}
+
+func (x *DeleteExportResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pdf_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteExportResponse.ProtoReflect.Descriptor instead.
+func (*DeleteExportResponse) Descriptor() ([]byte, []int) {
+	return file_pdf_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *DeleteExportResponse) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
 }
 
 var File_pdf_proto protoreflect.FileDescriptor
 
 const file_pdf_proto_rawDesc = "" +
 	"\n" +
-	"\tpdf.proto\x12\x16webitel_media_exporter\x1a\x1cgoogle/api/annotations.proto\"s\n" +
-	"\x19PdfGenerateCallPdfRequest\x12\x17\n" +
+	"\tpdf.proto\x12\x16webitel_media_exporter\x1a\x1cgoogle/api/annotations.proto\"x\n" +
+	"\x1cCreateScreenrecordingRequest\x12\x19\n" +
+	"\bagent_id\x18\x01 \x01(\x03R\aagentId\x12\x12\n" +
+	"\x04from\x18\x02 \x01(\x03R\x04from\x12\x0e\n" +
+	"\x02to\x18\x03 \x01(\x03R\x02to\x12\x19\n" +
+	"\bfile_ids\x18\x04 \x03(\x03R\afileIds\"q\n" +
+	"\x17CreateCallExportRequest\x12\x17\n" +
 	"\acall_id\x18\x01 \x01(\tR\x06callId\x12\x12\n" +
 	"\x04from\x18\x03 \x01(\x03R\x04from\x12\x0e\n" +
 	"\x02to\x18\x04 \x01(\x03R\x02to\x12\x19\n" +
-	"\bfile_ids\x18\x05 \x03(\x03R\afileIds\"[\n" +
-	"\x18PdfCallPdfHistoryRequest\x12\x17\n" +
-	"\acall_id\x18\x01 \x01(\tR\x06callId\x12\x12\n" +
-	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x12\n" +
-	"\x04size\x18\x03 \x01(\x05R\x04size\".\n" +
-	"\x1cDeletePdfExportRecordRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\"/\n" +
-	"\x1dDeletePdfExportRecordResponse\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\"\xbb\x01\n" +
-	"!ScreenrecordingPdfGenerateRequest\x12\x19\n" +
-	"\bagent_id\x18\x01 \x01(\x03R\aagentId\x12<\n" +
-	"\achannel\x18\x02 \x01(\x0e2\".webitel_media_exporter.PdfChannelR\achannel\x12\x12\n" +
-	"\x04from\x18\x03 \x01(\x03R\x04from\x12\x0e\n" +
-	"\x02to\x18\x04 \x01(\x03R\x02to\x12\x19\n" +
-	"\bfile_ids\x18\x05 \x03(\x03R\afileIds\"J\n" +
-	"\x12PdfDownloadRequest\x12\x17\n" +
-	"\afile_id\x18\x01 \x01(\x03R\x06fileId\x12\x1b\n" +
-	"\tdomain_id\x18\x02 \x01(\x03R\bdomainId\"\x92\x01\n" +
-	"\x11PdfExportMetadata\x12\x17\n" +
-	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x1b\n" +
-	"\tfile_name\x18\x02 \x01(\tR\bfileName\x12\x1b\n" +
-	"\tmime_type\x18\x03 \x01(\tR\bmimeType\x12\x16\n" +
-	"\x06status\x18\x04 \x01(\tR\x06status\x12\x12\n" +
-	"\x04size\x18\x05 \x01(\x03R\x04size\"$\n" +
-	"\x0ePdfExportChunk\x12\x12\n" +
-	"\x04data\x18\x01 \x01(\fR\x04data\"e\n" +
-	" PdfScreenrecordingHistoryRequest\x12\x19\n" +
+	"\bfile_ids\x18\x05 \x03(\x03R\afileIds\"f\n" +
+	"!ListScreenrecordingHistoryRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\x03R\aagentId\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x12\n" +
-	"\x04size\x18\x03 \x01(\x05R\x04size\"z\n" +
-	"\x12PdfHistoryResponse\x12\x12\n" +
+	"\x04size\x18\x03 \x01(\x05R\x04size\"Y\n" +
+	"\x16ListCallHistoryRequest\x12\x17\n" +
+	"\acall_id\x18\x01 \x01(\tR\x06callId\x12\x12\n" +
+	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x12\n" +
+	"\x04size\x18\x03 \x01(\x05R\x04size\"y\n" +
+	"\x13ListExportsResponse\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x12\n" +
-	"\x04next\x18\x02 \x01(\bR\x04next\x12<\n" +
-	"\x04data\x18\x03 \x03(\v2(.webitel_media_exporter.PdfHistoryRecordR\x04data\"\xa9\x02\n" +
-	"\x10PdfHistoryRecord\x12\x0e\n" +
+	"\x04next\x18\x02 \x01(\bR\x04next\x12:\n" +
+	"\x05items\x18\x03 \x03(\v2$.webitel_media_exporter.ExportRecordR\x05items\"\xb1\x01\n" +
+	"\n" +
+	"ExportTask\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x1b\n" +
+	"\tfile_name\x18\x02 \x01(\tR\bfileName\x12\x1b\n" +
+	"\tmime_type\x18\x03 \x01(\tR\bmimeType\x12<\n" +
+	"\x06status\x18\x04 \x01(\x0e2$.webitel_media_exporter.ExportStatusR\x06status\x12\x12\n" +
+	"\x04size\x18\x05 \x01(\x03R\x04size\"\xa2\x02\n" +
+	"\fExportRecord\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x17\n" +
 	"\afile_id\x18\x03 \x01(\x03R\x06fileId\x12\x1b\n" +
@@ -878,26 +721,27 @@ const file_pdf_proto_rawDesc = "" +
 	"\n" +
 	"created_by\x18\a \x01(\x03R\tcreatedBy\x12\x1d\n" +
 	"\n" +
-	"updated_by\x18\b \x01(\x03R\tupdatedBy\x12?\n" +
-	"\x06status\x18\t \x01(\x0e2'.webitel_media_exporter.PdfExportStatusR\x06status*+\n" +
+	"updated_by\x18\b \x01(\x03R\tupdatedBy\x12<\n" +
+	"\x06status\x18\t \x01(\x0e2$.webitel_media_exporter.ExportStatusR\x06status\"%\n" +
+	"\x13DeleteExportRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\"&\n" +
+	"\x14DeleteExportResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id*`\n" +
+	"\fExportStatus\x12\x1d\n" +
+	"\x19EXPORT_STATUS_UNSPECIFIED\x10\x00\x12\v\n" +
+	"\aPENDING\x10\x01\x12\x0e\n" +
 	"\n" +
-	"PdfChannel\x12\b\n" +
-	"\x04CALL\x10\x00\x12\x13\n" +
-	"\x0fSCREENRECORDING\x10\x01*\xaf\x01\n" +
-	"\x0fPdfExportStatus\x12!\n" +
-	"\x1dPDF_EXPORT_STATUS_UNSPECIFIED\x10\x00\x12\x1d\n" +
-	"\x19PDF_EXPORT_STATUS_PENDING\x10\x01\x12 \n" +
-	"\x1cPDF_EXPORT_STATUS_PROCESSING\x10\x02\x12\x1a\n" +
-	"\x16PDF_EXPORT_STATUS_DONE\x10\x03\x12\x1c\n" +
-	"\x18PDF_EXPORT_STATUS_FAILED\x10\x042\xe2\a\n" +
+	"PROCESSING\x10\x02\x12\b\n" +
+	"\x04DONE\x10\x03\x12\n" +
 	"\n" +
-	"PdfService\x12\xab\x01\n" +
-	" GenerateScreenrecordingPdfExport\x129.webitel_media_exporter.ScreenrecordingPdfGenerateRequest\x1a).webitel_media_exporter.PdfExportMetadata\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/export/pdf/{agent_id}\x12\x88\x01\n" +
-	"\x11DownloadPdfExport\x12*.webitel_media_exporter.PdfDownloadRequest\x1a&.webitel_media_exporter.PdfExportChunk\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/export/pdf/{file_id}0\x01\x12\xb2\x01\n" +
-	"\"GetScreenrecordingPdfExportHistory\x128.webitel_media_exporter.PdfScreenrecordingHistoryRequest\x1a*.webitel_media_exporter.PdfHistoryResponse\"&\x82\xd3\xe4\x93\x02 \x12\x1e/export/pdf/{agent_id}/history\x12\x9c\x01\n" +
-	"\x15GenerateCallPdfExport\x121.webitel_media_exporter.PdfGenerateCallPdfRequest\x1a).webitel_media_exporter.PdfExportMetadata\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/export/pdf/call/{call_id}\x12\x9d\x01\n" +
-	"\x11GetCallPdfHistory\x120.webitel_media_exporter.PdfCallPdfHistoryRequest\x1a*.webitel_media_exporter.PdfHistoryResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/export/pdf/call/{call_id}/history\x12\xa6\x01\n" +
-	"\x15DeletePdfExportRecord\x124.webitel_media_exporter.DeletePdfExportRecordRequest\x1a5.webitel_media_exporter.DeletePdfExportRecordResponse\" \x82\xd3\xe4\x93\x02\x1a*\x18/export/pdf/history/{id}B\xba\x01\n" +
+	"\x06FAILED\x10\x042\xbb\x06\n" +
+	"\n" +
+	"PdfService\x12\xb3\x01\n" +
+	"\x1bCreateScreenrecordingExport\x124.webitel_media_exporter.CreateScreenrecordingRequest\x1a\".webitel_media_exporter.ExportTask\":\x82\xd3\xe4\x93\x024:\x01*\"//agents/{agent_id}/exports/pdf/screenrecordings\x12\xbd\x01\n" +
+	"\x1aListScreenrecordingExports\x129.webitel_media_exporter.ListScreenrecordingHistoryRequest\x1a+.webitel_media_exporter.ListExportsResponse\"7\x82\xd3\xe4\x93\x021\x12//agents/{agent_id}/exports/pdf/screenrecordings\x12\x90\x01\n" +
+	"\x10CreateCallExport\x12/.webitel_media_exporter.CreateCallExportRequest\x1a\".webitel_media_exporter.ExportTask\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/calls/{call_id}/exports/pdf\x12\x94\x01\n" +
+	"\x0fListCallExports\x12..webitel_media_exporter.ListCallHistoryRequest\x1a+.webitel_media_exporter.ListExportsResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/calls/{call_id}/exports/pdf\x12\x8c\x01\n" +
+	"\fDeleteExport\x12+.webitel_media_exporter.DeleteExportRequest\x1a,.webitel_media_exporter.DeleteExportResponse\"!\x82\xd3\xe4\x93\x02\x1b*\x19/exports/pdf/history/{id}B\xba\x01\n" +
 	"\x1acom.webitel_media_exporterB\bPdfProtoP\x01Z\"github.com/webitel/pdf/api/pdf;pdf\xa2\x02\x03WXX\xaa\x02\x14WebitelMediaExporter\xca\x02\x14WebitelMediaExporter\xe2\x02 WebitelMediaExporter\\GPBMetadata\xea\x02\x14WebitelMediaExporterb\x06proto3"
 
 var (
@@ -912,44 +756,39 @@ func file_pdf_proto_rawDescGZIP() []byte {
 	return file_pdf_proto_rawDescData
 }
 
-var file_pdf_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_pdf_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_pdf_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_pdf_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_pdf_proto_goTypes = []any{
-	(PdfChannel)(0),                           // 0: webitel_media_exporter.PdfChannel
-	(PdfExportStatus)(0),                      // 1: webitel_media_exporter.PdfExportStatus
-	(*PdfGenerateCallPdfRequest)(nil),         // 2: webitel_media_exporter.PdfGenerateCallPdfRequest
-	(*PdfCallPdfHistoryRequest)(nil),          // 3: webitel_media_exporter.PdfCallPdfHistoryRequest
-	(*DeletePdfExportRecordRequest)(nil),      // 4: webitel_media_exporter.DeletePdfExportRecordRequest
-	(*DeletePdfExportRecordResponse)(nil),     // 5: webitel_media_exporter.DeletePdfExportRecordResponse
-	(*ScreenrecordingPdfGenerateRequest)(nil), // 6: webitel_media_exporter.ScreenrecordingPdfGenerateRequest
-	(*PdfDownloadRequest)(nil),                // 7: webitel_media_exporter.PdfDownloadRequest
-	(*PdfExportMetadata)(nil),                 // 8: webitel_media_exporter.PdfExportMetadata
-	(*PdfExportChunk)(nil),                    // 9: webitel_media_exporter.PdfExportChunk
-	(*PdfScreenrecordingHistoryRequest)(nil),  // 10: webitel_media_exporter.PdfScreenrecordingHistoryRequest
-	(*PdfHistoryResponse)(nil),                // 11: webitel_media_exporter.PdfHistoryResponse
-	(*PdfHistoryRecord)(nil),                  // 12: webitel_media_exporter.PdfHistoryRecord
+	(ExportStatus)(0),                         // 0: webitel_media_exporter.ExportStatus
+	(*CreateScreenrecordingRequest)(nil),      // 1: webitel_media_exporter.CreateScreenrecordingRequest
+	(*CreateCallExportRequest)(nil),           // 2: webitel_media_exporter.CreateCallExportRequest
+	(*ListScreenrecordingHistoryRequest)(nil), // 3: webitel_media_exporter.ListScreenrecordingHistoryRequest
+	(*ListCallHistoryRequest)(nil),            // 4: webitel_media_exporter.ListCallHistoryRequest
+	(*ListExportsResponse)(nil),               // 5: webitel_media_exporter.ListExportsResponse
+	(*ExportTask)(nil),                        // 6: webitel_media_exporter.ExportTask
+	(*ExportRecord)(nil),                      // 7: webitel_media_exporter.ExportRecord
+	(*DeleteExportRequest)(nil),               // 8: webitel_media_exporter.DeleteExportRequest
+	(*DeleteExportResponse)(nil),              // 9: webitel_media_exporter.DeleteExportResponse
 }
 var file_pdf_proto_depIdxs = []int32{
-	0,  // 0: webitel_media_exporter.ScreenrecordingPdfGenerateRequest.channel:type_name -> webitel_media_exporter.PdfChannel
-	12, // 1: webitel_media_exporter.PdfHistoryResponse.data:type_name -> webitel_media_exporter.PdfHistoryRecord
-	1,  // 2: webitel_media_exporter.PdfHistoryRecord.status:type_name -> webitel_media_exporter.PdfExportStatus
-	6,  // 3: webitel_media_exporter.PdfService.GenerateScreenrecordingPdfExport:input_type -> webitel_media_exporter.ScreenrecordingPdfGenerateRequest
-	7,  // 4: webitel_media_exporter.PdfService.DownloadPdfExport:input_type -> webitel_media_exporter.PdfDownloadRequest
-	10, // 5: webitel_media_exporter.PdfService.GetScreenrecordingPdfExportHistory:input_type -> webitel_media_exporter.PdfScreenrecordingHistoryRequest
-	2,  // 6: webitel_media_exporter.PdfService.GenerateCallPdfExport:input_type -> webitel_media_exporter.PdfGenerateCallPdfRequest
-	3,  // 7: webitel_media_exporter.PdfService.GetCallPdfHistory:input_type -> webitel_media_exporter.PdfCallPdfHistoryRequest
-	4,  // 8: webitel_media_exporter.PdfService.DeletePdfExportRecord:input_type -> webitel_media_exporter.DeletePdfExportRecordRequest
-	8,  // 9: webitel_media_exporter.PdfService.GenerateScreenrecordingPdfExport:output_type -> webitel_media_exporter.PdfExportMetadata
-	9,  // 10: webitel_media_exporter.PdfService.DownloadPdfExport:output_type -> webitel_media_exporter.PdfExportChunk
-	11, // 11: webitel_media_exporter.PdfService.GetScreenrecordingPdfExportHistory:output_type -> webitel_media_exporter.PdfHistoryResponse
-	8,  // 12: webitel_media_exporter.PdfService.GenerateCallPdfExport:output_type -> webitel_media_exporter.PdfExportMetadata
-	11, // 13: webitel_media_exporter.PdfService.GetCallPdfHistory:output_type -> webitel_media_exporter.PdfHistoryResponse
-	5,  // 14: webitel_media_exporter.PdfService.DeletePdfExportRecord:output_type -> webitel_media_exporter.DeletePdfExportRecordResponse
-	9,  // [9:15] is the sub-list for method output_type
-	3,  // [3:9] is the sub-list for method input_type
-	3,  // [3:3] is the sub-list for extension type_name
-	3,  // [3:3] is the sub-list for extension extendee
-	0,  // [0:3] is the sub-list for field type_name
+	7, // 0: webitel_media_exporter.ListExportsResponse.items:type_name -> webitel_media_exporter.ExportRecord
+	0, // 1: webitel_media_exporter.ExportTask.status:type_name -> webitel_media_exporter.ExportStatus
+	0, // 2: webitel_media_exporter.ExportRecord.status:type_name -> webitel_media_exporter.ExportStatus
+	1, // 3: webitel_media_exporter.PdfService.CreateScreenrecordingExport:input_type -> webitel_media_exporter.CreateScreenrecordingRequest
+	3, // 4: webitel_media_exporter.PdfService.ListScreenrecordingExports:input_type -> webitel_media_exporter.ListScreenrecordingHistoryRequest
+	2, // 5: webitel_media_exporter.PdfService.CreateCallExport:input_type -> webitel_media_exporter.CreateCallExportRequest
+	4, // 6: webitel_media_exporter.PdfService.ListCallExports:input_type -> webitel_media_exporter.ListCallHistoryRequest
+	8, // 7: webitel_media_exporter.PdfService.DeleteExport:input_type -> webitel_media_exporter.DeleteExportRequest
+	6, // 8: webitel_media_exporter.PdfService.CreateScreenrecordingExport:output_type -> webitel_media_exporter.ExportTask
+	5, // 9: webitel_media_exporter.PdfService.ListScreenrecordingExports:output_type -> webitel_media_exporter.ListExportsResponse
+	6, // 10: webitel_media_exporter.PdfService.CreateCallExport:output_type -> webitel_media_exporter.ExportTask
+	5, // 11: webitel_media_exporter.PdfService.ListCallExports:output_type -> webitel_media_exporter.ListExportsResponse
+	9, // 12: webitel_media_exporter.PdfService.DeleteExport:output_type -> webitel_media_exporter.DeleteExportResponse
+	8, // [8:13] is the sub-list for method output_type
+	3, // [3:8] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_pdf_proto_init() }
@@ -962,8 +801,8 @@ func file_pdf_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pdf_proto_rawDesc), len(file_pdf_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   11,
+			NumEnums:      1,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

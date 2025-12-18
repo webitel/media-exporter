@@ -1,11 +1,13 @@
 package cache
 
-import "github.com/webitel/media-exporter/internal/model"
+import (
+	domain "github.com/webitel/media-exporter/internal/domain/model/pdf"
+)
 
 type Cache interface {
 	Exists(taskID string) (bool, error)
-	PushExportTask(task model.ExportTask) error
-	PopExportTask() (model.ExportTask, error)
+	PushExportTask(task domain.ExportTask) error
+	PopExportTask() (domain.ExportTask, error)
 	SetExportStatus(taskID, status string) error
 	GetExportStatus(taskID string) (string, error)
 	SetExportURL(taskID, url string) error

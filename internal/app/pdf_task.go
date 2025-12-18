@@ -4,40 +4,40 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/webitel/media-exporter/api/storage"
-	"github.com/webitel/media-exporter/internal/model"
-	"github.com/webitel/media-exporter/internal/pdf/maroto"
+	"github.com/webitel/media-exporter/internal/domain/model"
+	domain "github.com/webitel/media-exporter/internal/domain/model/pdf"
+	"github.com/webitel/media-exporter/internal/util"
+	"github.com/webitel/media-exporter/internal/util/pdf/maroto"
 	"github.com/webitel/storage/gen/engine"
-	"google.golang.org/grpc/metadata"
 )
 
-func handlePdfTask(ctx context.Context, session *model.Session, app *App, task model.ExportTask) error {
-	historyID, err := app.cache.GetExportHistoryID(task.TaskID)
+func (app *App) HandlePdfTask(ctx context.Context, session *model.Session, task domain.ExportTask) error {
+	historyID, err := app.Cache.GetExportHistoryID(task.TaskID)
 	if err != nil {
 
-		_ = app.cache.SetExportStatus(task.TaskID, "failed")
+		_ = app.Cache.SetExportStatus(task.TaskID, "failed")
 		return fmt.Errorf("historyID missing for task %s: %w", task.TaskID, err)
 	}
 
-	if err := setTaskStatus(app, historyID, task.TaskID, "processing", session.UserID(), nil); err != nil {
+	if err := SetTaskStatus(app, historyID, task.TaskID, "processing", session.UserID(), nil); err != nil {
 		return fmt.Errorf("failed to set processing status: %w", err)
 	}
 
-	enumChannel, err := parseChannel(task.Channel)
+	channel, err := ParseChannel(task.Channel)
 	if err != nil {
-		_ = setTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
+		_ = SetTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
 		return fmt.Errorf("failed to parse channel: %w", err)
 	}
 
-	ctx = contextWithHeaders(task.Headers)
+	ctx = util.ContextWithHeaders(task.Headers)
 
-	filesResp, err := app.storageClient.SearchScreenRecordings(ctx, &storage.SearchScreenRecordingsRequest{
+	filesResp, err := app.StorageClient.SearchScreenRecordings(ctx, &storage.SearchScreenRecordingsRequest{
 		Id:   task.IDs,
-		Type: enumChannel,
+		Type: channel,
 		UploadedAt: &engine.FilterBetween{
 			From: task.From,
 			To:   task.To,
@@ -45,28 +45,28 @@ func handlePdfTask(ctx context.Context, session *model.Session, app *App, task m
 	})
 
 	if filesResp == nil || filesResp.Items == nil || len(filesResp.Items) == 0 {
-		_ = setTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
+		_ = SetTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
 		return fmt.Errorf("failed to find files: %w", err)
 	}
 
 	if err != nil {
 		slog.ErrorContext(ctx, "SearchScreenRecordings failed", "taskID", task.TaskID, "error", err)
-		_ = setTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
+		_ = SetTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
 		return fmt.Errorf("search recordings failed: %w", err)
 	}
 
 	tmpFiles, fileInfos, err := downloadScreenshotsForPDF(ctx, session, app, filesResp.Items)
 	if err != nil {
 		slog.ErrorContext(ctx, "downloadScreenshotsForPDF failed", "taskID", task.TaskID, "error", err)
-		_ = setTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
+		_ = SetTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
 		return fmt.Errorf("download failed: %w", err)
 	}
-	defer cleanupFiles(tmpFiles)
+	defer util.CleanupFiles(tmpFiles)
 
 	pdfBytes, err := maroto.GeneratePDF(tmpFiles, fileInfos)
 	if err != nil {
 		slog.ErrorContext(ctx, "GeneratePDF failed", "taskID", task.TaskID, "error", err)
-		_ = setTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
+		_ = SetTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
 		return fmt.Errorf("PDF generation failed: %w", err)
 	}
 
@@ -93,51 +93,49 @@ func handlePdfTask(ctx context.Context, session *model.Session, app *App, task m
 		)
 	}
 
-	tempFilePath := filepath.Join(app.config.TempDir, fileName)
-	if err := SavePDFToTemp(tempFilePath, pdfBytes); err != nil {
+	tempFilePath := filepath.Join(app.Config.TempDir, fileName)
+	if err := util.SavePDFToTemp(tempFilePath, pdfBytes); err != nil {
 		slog.ErrorContext(ctx, "SavePDFToFile failed", "taskID", task.TaskID, "error", err)
-		_ = setTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
+		_ = SetTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
 		return fmt.Errorf("save PDF failed: %w", err)
 	}
 
 	res, err := uploadPDFToStorage(ctx, session, app, tempFilePath, task)
 	if err != nil {
 		slog.ErrorContext(ctx, "uploadPDFToStorage failed", "taskID", task.TaskID, "error", err)
-		_ = setTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
+		_ = SetTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
 		return fmt.Errorf("upload failed: %w", err)
 	}
 
-	if err := setTaskStatus(app, historyID, task.TaskID, "done", session.UserID(), &res.FileId); err != nil {
+	if err := SetTaskStatus(app, historyID, task.TaskID, "done", session.UserID(), &res.FileId); err != nil {
 		slog.ErrorContext(ctx, "failed to set done status", "taskID", task.TaskID, "error", err)
 		return fmt.Errorf("failed to set done status: %w", err)
 	}
 
-	_ = app.cache.ClearExportTask(task.TaskID)
+	_ = app.Cache.ClearExportTask(task.TaskID)
 
 	slog.InfoContext(ctx, "PDF task completed successfully", "taskID", task.TaskID, "fileID", res.FileId)
 
 	return nil
 }
 
-func SavePDFToTemp(path string, pdfBytes []byte) error {
-	err := os.WriteFile(path, pdfBytes, 0644)
-	if err != nil {
-		return err
+func ParseChannel(channel string) (storage.ScreenrecordingType, error) {
+	switch channel {
+	case "call":
+		return storage.ScreenrecordingType_SCREENSHOT, nil
+	case "screenrecording":
+		return storage.ScreenrecordingType_SCREENSHOT, nil
+	default:
+		return 0, fmt.Errorf("invalid channel: %v", channel)
 	}
-
-	return nil
 }
 
-// build a new context.Background() with outgoing metadata created from headers map
-func contextWithHeaders(headers map[string]string) context.Context {
-	ctx := context.Background()
-	if len(headers) == 0 {
-		return ctx
-	}
-	pairs := make([]string, 0, len(headers)*2)
-	for k, v := range headers {
-		pairs = append(pairs, k, v)
-	}
-	md := metadata.Pairs(pairs...)
-	return metadata.NewOutgoingContext(ctx, md)
+func SetTaskStatus(app *App, historyID int64, taskID, status string, updatedBy int64, fileID *int64) error {
+	_ = app.Cache.SetExportStatus(taskID, status)
+	return app.Store.Pdf().UpdatePdfExportStatus(&domain.UpdateExportStatus{
+		ID:        historyID,
+		Status:    status,
+		UpdatedBy: updatedBy,
+		FileID:    fileID,
+	})
 }

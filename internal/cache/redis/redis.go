@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	domain "github.com/webitel/media-exporter/internal/domain/model/pdf"
 	"github.com/webitel/media-exporter/internal/errors"
-	"github.com/webitel/media-exporter/internal/model"
 )
 
 type RedisCache struct {
@@ -42,7 +43,7 @@ func NewRedisCache(addr, password string, db int) (*RedisCache, error) {
 
 // ----------------------- Task Queue -----------------------
 
-func (r *RedisCache) PushExportTask(task model.ExportTask) error {
+func (r *RedisCache) PushExportTask(task domain.ExportTask) error {
 	data, err := json.Marshal(task)
 	if err != nil {
 		return err
@@ -55,28 +56,32 @@ func (r *RedisCache) PushExportTask(task model.ExportTask) error {
 
 // cache/redis.go
 
-func (r *RedisCache) PopExportTask() (model.ExportTask, error) {
-
+func (r *RedisCache) PopExportTask() (domain.ExportTask, error) {
 	result, err := r.client.BRPop(context.Background(), 5*time.Second, exportQueueKey).Result()
 
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
-
-			return model.ExportTask{}, fmt.Errorf("queue empty (timeout)")
+			return domain.ExportTask{}, fmt.Errorf("queue empty (timeout)")
 		}
-		return model.ExportTask{}, err
+		slog.Error("REDIS BRPOP ERROR", "err", err)
+		return domain.ExportTask{}, err
 	}
 
 	if len(result) < 2 {
-		return model.ExportTask{}, fmt.Errorf("unexpected BRPop result format")
+		slog.Warn("BRPOP BAD FORMAT", "result", result)
+		return domain.ExportTask{}, fmt.Errorf("unexpected BRPop result format")
 	}
 
 	data := []byte(result[1])
 
-	var task model.ExportTask
+	var task domain.ExportTask
 	if err := json.Unmarshal(data, &task); err != nil {
-		return model.ExportTask{}, fmt.Errorf("failed to unmarshal task: %w", err)
+		slog.Error("BRPOP UNMARSHAL ERROR", "err", err)
+		return domain.ExportTask{}, fmt.Errorf("failed to unmarshal task: %w", err)
 	}
+
+	slog.Info("POPED TASK FROM REDIS QUEUE", "taskID", task.TaskID)
+
 	return task, nil
 }
 
@@ -175,14 +180,14 @@ func (r *RedisCache) ClearExportTask(taskID string) error {
 // ----------------------- Debug -----------------------
 
 // ListExportQueue returns all tasks in the queue (debug only)
-func (r *RedisCache) ListExportQueue() ([]model.ExportTask, error) {
+func (r *RedisCache) ListExportQueue() ([]domain.ExportTask, error) {
 	items, err := r.client.LRange(context.Background(), exportQueueKey, 0, -1).Result()
 	if err != nil {
 		return nil, err
 	}
-	var tasks []model.ExportTask
+	var tasks []domain.ExportTask
 	for _, item := range items {
-		var t model.ExportTask
+		var t domain.ExportTask
 		if err := json.Unmarshal([]byte(item), &t); err != nil {
 			continue
 		}

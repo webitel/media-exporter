@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/webitel/media-exporter/internal/model"
+	"github.com/webitel/media-exporter/internal/domain/model"
 )
 
 const (
@@ -18,7 +18,7 @@ const (
 // StartExportWorker launches background workers to process export tasks concurrently.
 // If too many workers are configured, the number is automatically limited based on available CPU cores.
 func (app *App) StartExportWorker(ctx context.Context) {
-	numWorkers := app.config.Export.Workers
+	numWorkers := app.Config.Export.Workers
 	if numWorkers <= 0 {
 		numWorkers = 4
 	}
@@ -37,7 +37,7 @@ func (app *App) StartExportWorker(ctx context.Context) {
 				case <-ctx.Done():
 					return
 				default:
-					task, err := app.cache.PopExportTask()
+					task, err := app.Cache.PopExportTask()
 					if err != nil {
 						time.Sleep(time.Second)
 						continue
@@ -46,15 +46,16 @@ func (app *App) StartExportWorker(ctx context.Context) {
 					session, err := model.NewSession(task.UserID, task.DomainID, task.Headers[authorizationHeader])
 					if err != nil {
 
-						_ = app.cache.ClearExportTask(task.TaskID)
+						_ = app.Cache.ClearExportTask(task.TaskID)
 						continue
 					}
 
 					switch task.Type {
 
 					case PdfExportType:
-						if err := handlePdfTask(ctx, session, app, task); err != nil {
-							_ = app.cache.ClearExportTask(task.TaskID)
+						if err := app.HandlePdfTask(ctx, session, task); err != nil {
+							slog.ErrorContext(ctx, "PDF task failed", "taskID", task.TaskID, "error", err)
+							_ = app.Cache.ClearExportTask(task.TaskID)
 						}
 					case ZipExportType:
 						panic("not implemented")

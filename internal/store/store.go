@@ -1,23 +1,32 @@
 package store
 
 import (
-	pdfapi "github.com/webitel/media-exporter/api/pdf"
-	"github.com/webitel/media-exporter/internal/model"
-	"github.com/webitel/media-exporter/internal/model/options"
+	"github.com/webitel/media-exporter/internal/domain/model/options"
+	domain "github.com/webitel/media-exporter/internal/domain/model/pdf"
 )
 
 type Store interface {
 	Pdf() PdfStore
 
 	// ------------ Database Management ------------ //
-	Open() error  // Return custom DB error
-	Close() error // Return custom DB error
+	Open() error
+	Close() error
 }
 
 type PdfStore interface {
-	InsertPdfExportHistory(opts *options.CreateOptions, input *model.NewExportHistory) (int64, error)
-	UpdatePdfExportStatus(input *model.UpdateExportStatus) error
-	GetScreenrecordingPdfExportHistory(opts *options.SearchOptions, request *pdfapi.PdfScreenrecordingHistoryRequest) (*pdfapi.PdfHistoryResponse, error)
-	GetCallPdfExportHistory(opts *options.SearchOptions, request *pdfapi.PdfCallPdfHistoryRequest) (*pdfapi.PdfHistoryResponse, error)
-	DeletePdfExportRecord(opts *options.DeleteOptions, request *pdfapi.DeletePdfExportRecordRequest) error
+	// InsertPdfExportHistory adds a new record to the export history table.
+	// Used by both screenrecordings and calls.
+	InsertPdfExportHistory(opts *options.CreateOptions, input *domain.NewExportHistory) (int64, error)
+
+	// UpdatePdfExportStatus updates the processing status and final file reference.
+	UpdatePdfExportStatus(input *domain.UpdateExportStatus) error
+
+	// GetPdfExportHistory retrieves paginated history for screenrecordings by AgentID.
+	GetPdfExportHistory(req *domain.PdfHistoryRequestOptions) (*domain.HistoryResponse, error)
+
+	// GetCallPdfExportHistory retrieves paginated history for calls by CallID.
+	GetCallPdfExportHistory(req *domain.CallHistoryRequestOptions) (*domain.HistoryResponse, error)
+
+	// DeletePdfExportRecord removes a specific record from the history.
+	DeletePdfExportRecord(opts *options.DeleteOptions, recordID int64) error
 }

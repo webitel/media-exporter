@@ -9,10 +9,11 @@ import (
 	"time"
 
 	"github.com/webitel/media-exporter/api/storage"
-	"github.com/webitel/media-exporter/internal/model"
+	model2 "github.com/webitel/media-exporter/internal/domain/model"
+	domain "github.com/webitel/media-exporter/internal/domain/model/pdf"
 )
 
-func uploadPDFToStorage(ctx context.Context, session *model.Session, app *App, filePath string, task model.ExportTask) (*storage.UploadFileResponse, error) {
+func uploadPDFToStorage(ctx context.Context, session *model2.Session, app *App, filePath string, task domain.ExportTask) (*storage.UploadFileResponse, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("open file failed: %w", err)
@@ -24,7 +25,7 @@ func uploadPDFToStorage(ctx context.Context, session *model.Session, app *App, f
 		}
 	}(f)
 
-	stream, err := app.storageClient.UploadFile(ctx)
+	stream, err := app.StorageClient.UploadFile(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("UploadFile init failed: %w", err)
 	}
@@ -39,7 +40,11 @@ func uploadPDFToStorage(ctx context.Context, session *model.Session, app *App, f
 	return stream.CloseAndRecv()
 }
 
-func sendFileMetadata(stream storage.FileService_UploadFileClient, session *model.Session, task model.ExportTask) error {
+func sendFileMetadata(stream storage.FileService_UploadFileClient, session *model2.Session, task domain.ExportTask) error {
+	channel, err := ParseUploadFileChannel(task.Channel)
+	if err != nil {
+		return err
+	}
 	return stream.Send(&storage.UploadFileRequest{
 		Data: &storage.UploadFileRequest_Metadata_{
 			Metadata: &storage.UploadFileRequest_Metadata{
@@ -47,13 +52,24 @@ func sendFileMetadata(stream storage.FileService_UploadFileClient, session *mode
 				MimeType:       "application/pdf",
 				Uuid:           task.TaskID,
 				StreamResponse: true,
-				Channel:        storage.UploadFileChannel_ScreenRecordingChannel,
+				Channel:        channel,
 				UploadedBy:     session.UserID(),
 				DomainId:       session.DomainID(),
 				CreatedAt:      time.Now().UnixMilli(),
 			},
 		},
 	})
+}
+
+func ParseUploadFileChannel(channel string) (storage.UploadFileChannel, error) {
+	switch channel {
+	case "call":
+		return storage.UploadFileChannel_ScreenRecordingChannel, nil
+	case "screenrecording":
+		return storage.UploadFileChannel_ScreenRecordingChannel, nil
+	default:
+		return 0, fmt.Errorf("invalid channel: %v", channel)
+	}
 }
 
 func sendFileChunks(stream storage.FileService_UploadFileClient, f *os.File) error {

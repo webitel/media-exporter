@@ -1,9 +1,12 @@
 package app
 
 import (
-	"log"
+	"fmt"
+	"log/slog"
 
 	mediaexporter "github.com/webitel/media-exporter/api/pdf"
+	grpc2 "github.com/webitel/media-exporter/internal/handler/grpc"
+	"github.com/webitel/media-exporter/internal/service"
 	"google.golang.org/grpc"
 )
 
@@ -16,9 +19,31 @@ type serviceRegistration struct {
 
 // RegisterServices initializes and registers all necessary gRPC services.
 func RegisterServices(grpcServer *grpc.Server, appInstance *App) {
+	if appInstance.log == nil {
+		appInstance.log = slog.Default()
+	}
+	log := appInstance.log
+
 	services := []serviceRegistration{
 		{
-			init: func(a *App) (any, error) { return NewPdfService(a) },
+			init: func(a *App) (any, error) {
+				pdfService, err := service.NewPdfService(
+					a.Store.Pdf(),
+					a.Cache,
+					log,
+				)
+				if err != nil {
+					return nil, fmt.Errorf("failed to init pdf s: %w", err)
+				}
+
+				pdfHandler, err := grpc2.NewPdfHandler(pdfService, a.StorageClient)
+				if err != nil {
+					return nil, fmt.Errorf("failed to init pdf handler: %w", err)
+				}
+
+				return pdfHandler, nil
+			},
+
 			register: func(s *grpc.Server, svc any) {
 				mediaexporter.RegisterPdfServiceServer(s, svc.(mediaexporter.PdfServiceServer))
 			},
@@ -26,15 +51,12 @@ func RegisterServices(grpcServer *grpc.Server, appInstance *App) {
 		},
 	}
 
-	// Initialize and register each service
-	for _, service := range services {
-		svc, err := service.init(appInstance)
+	for _, s := range services {
+		svc, err := s.init(appInstance)
 		if err != nil {
-			log.Printf("Error initializing %s service: %v", service.name, err)
-
 			continue
 		}
-		service.register(grpcServer, svc)
-		log.Printf("%s service registered successfully", service.name)
+		s.register(grpcServer, svc)
+		slog.Info("registered service " + s.name)
 	}
 }

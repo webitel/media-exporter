@@ -10,7 +10,7 @@ import (
 
 	conf "github.com/webitel/media-exporter/config"
 	"github.com/webitel/media-exporter/internal/app"
-	"github.com/webitel/media-exporter/internal/model"
+	"github.com/webitel/media-exporter/internal/domain/model"
 	logging "github.com/webitel/media-exporter/internal/otel"
 
 	// ------------ logging ------------ //

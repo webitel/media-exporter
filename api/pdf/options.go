@@ -32,68 +32,57 @@ var WebitelAPI = WebitelServicesInfo{
 		ObjClass:           "",
 		AdditionalLicenses: []string{},
 		WebitelMethods: map[string]WebitelMethod{
-			"GenerateScreenrecordingPdfExport": WebitelMethod{
+			"CreateScreenrecordingExport": WebitelMethod{
 				Access: 0,
-				Input:  "ScreenrecordingPdfGenerateRequest",
-				Output: "PdfExportMetadata",
+				Input:  "CreateScreenrecordingRequest",
+				Output: "ExportTask",
 				HttpBindings: []*HttpBinding{
 					{
-						Path:   "/export/pdf/{agent_id}",
+						Path:   "/agents/{agent_id}/exports/pdf/screenrecordings",
 						Method: "POST",
 					},
 				},
 			},
-			"DownloadPdfExport": WebitelMethod{
+			"ListScreenrecordingExports": WebitelMethod{
 				Access: 0,
-				Input:  "PdfDownloadRequest",
-				Output: "PdfExportChunk",
+				Input:  "ListScreenrecordingHistoryRequest",
+				Output: "ListExportsResponse",
 				HttpBindings: []*HttpBinding{
 					{
-						Path:   "/export/pdf/{file_id}",
+						Path:   "/agents/{agent_id}/exports/pdf/screenrecordings",
 						Method: "GET",
 					},
 				},
 			},
-			"GetScreenrecordingPdfExportHistory": WebitelMethod{
+			"CreateCallExport": WebitelMethod{
 				Access: 0,
-				Input:  "PdfScreenrecordingHistoryRequest",
-				Output: "PdfHistoryResponse",
+				Input:  "CreateCallExportRequest",
+				Output: "ExportTask",
 				HttpBindings: []*HttpBinding{
 					{
-						Path:   "/export/pdf/{agent_id}/history",
-						Method: "GET",
-					},
-				},
-			},
-			"GenerateCallPdfExport": WebitelMethod{
-				Access: 0,
-				Input:  "PdfGenerateCallPdfRequest",
-				Output: "PdfExportMetadata",
-				HttpBindings: []*HttpBinding{
-					{
-						Path:   "/export/pdf/call/{call_id}",
+						Path:   "/calls/{call_id}/exports/pdf",
 						Method: "POST",
 					},
 				},
 			},
-			"GetCallPdfHistory": WebitelMethod{
+			"ListCallExports": WebitelMethod{
 				Access: 0,
-				Input:  "PdfCallPdfHistoryRequest",
-				Output: "PdfHistoryResponse",
+				Input:  "ListCallHistoryRequest",
+				Output: "ListExportsResponse",
 				HttpBindings: []*HttpBinding{
 					{
-						Path:   "/export/pdf/call/{call_id}/history",
+						Path:   "/calls/{call_id}/exports/pdf",
 						Method: "GET",
 					},
 				},
 			},
-			"DeletePdfExportRecord": WebitelMethod{
+			"DeleteExport": WebitelMethod{
 				Access: 0,
-				Input:  "DeletePdfExportRecordRequest",
-				Output: "DeletePdfExportRecordResponse",
+				Input:  "DeleteExportRequest",
+				Output: "DeleteExportResponse",
 				HttpBindings: []*HttpBinding{
 					{
-						Path:   "/export/pdf/history/{id}",
+						Path:   "/exports/pdf/history/{id}",
 						Method: "DELETE",
 					},
 				},

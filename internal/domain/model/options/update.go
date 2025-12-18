@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/webitel/media-exporter/auth"
+	"github.com/webitel/media-exporter/internal/domain/model/options/util"
 	"github.com/webitel/media-exporter/internal/errors"
-	"github.com/webitel/media-exporter/internal/model/options/util"
 	"google.golang.org/grpc/codes"
 )
 
