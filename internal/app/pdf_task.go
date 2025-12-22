@@ -27,17 +27,18 @@ func (app *App) HandlePdfTask(ctx context.Context, session *model.Session, task 
 		return fmt.Errorf("failed to set processing status: %w", err)
 	}
 
-	channel, err := ParseChannel(task.Channel)
-	if err != nil {
-		_ = SetTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
-		return fmt.Errorf("failed to parse channel: %w", err)
-	}
-
 	ctx = util.ContextWithHeaders(task.Headers)
 
+	channel, err := ParseChannel(task.Channel)
+	if err != nil {
+		_ = app.Cache.SetExportStatus(task.TaskID, "failed")
+		return fmt.Errorf("channel missing for task %s: %w", task.TaskID, err)
+	}
+
 	filesResp, err := app.StorageClient.SearchScreenRecordings(ctx, &storage.SearchScreenRecordingsRequest{
-		Id:   task.IDs,
-		Type: channel,
+		Id:      task.IDs,
+		Type:    storage.ScreenrecordingType_SCREENSHOT,
+		Channel: channel,
 		UploadedAt: &engine.FilterBetween{
 			From: task.From,
 			To:   task.To,
@@ -119,12 +120,12 @@ func (app *App) HandlePdfTask(ctx context.Context, session *model.Session, task 
 	return nil
 }
 
-func ParseChannel(channel string) (storage.ScreenrecordingType, error) {
+func ParseChannel(channel string) (storage.ScreenrecordingChannel, error) {
 	switch channel {
 	case "call":
-		return storage.ScreenrecordingType_SCREENSHOT, nil
+		return storage.ScreenrecordingChannel_CALL, nil
 	case "screenrecording":
-		return storage.ScreenrecordingType_SCREENSHOT, nil
+		return storage.ScreenrecordingChannel_SCREENRECORDING, nil
 	default:
 		return 0, fmt.Errorf("invalid channel: %v", channel)
 	}

@@ -21,7 +21,6 @@ func downloadScreenshotsForPDF(ctx context.Context, session *model.Session, app 
 	var wg sync.WaitGroup
 
 	errCh := make(chan error, len(files))
-
 	for _, f := range files {
 		wg.Add(1)
 		go func(f *storage.File) {

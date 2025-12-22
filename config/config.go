@@ -70,9 +70,7 @@ func bindFlagsAndEnv() {
 	// consul
 	pflag.String("id", "", "Service id")
 	pflag.String("consul", "", "Host to consul")
-	pflag.String("grpc_addr", "", "Public gRPC address with port")
-
-	// redis
+	pflag.String("grpc_addr", "", "Public gRPC address with port") // redis
 	pflag.String("redis_addr", "localhost:6379", "Redis address")
 	pflag.String("redis_password", "", "Redis password")
 	pflag.Int("redis_db", 0, "Redis DB number")
@@ -92,7 +90,6 @@ func bindFlagsAndEnv() {
 	_ = viper.BindEnv("redis_addr", "REDIS_ADDR")
 	_ = viper.BindEnv("redis_password", "REDIS_PASSWORD")
 	_ = viper.BindEnv("redis_db", "REDIS_DB")
-
 }
 
 func getConfigFilePath() string {

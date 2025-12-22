@@ -36,7 +36,7 @@ func RegisterServices(grpcServer *grpc.Server, appInstance *App) {
 					return nil, fmt.Errorf("failed to init pdf s: %w", err)
 				}
 
-				pdfHandler, err := grpc2.NewPdfHandler(pdfService, a.StorageClient)
+				pdfHandler, err := grpc2.NewPdfHandler(pdfService)
 				if err != nil {
 					return nil, fmt.Errorf("failed to init pdf handler: %w", err)
 				}

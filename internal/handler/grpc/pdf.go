@@ -4,7 +4,6 @@ import (
 	"context"
 
 	pdfapi "github.com/webitel/media-exporter/api/pdf"
-	"github.com/webitel/media-exporter/api/storage"
 	"github.com/webitel/media-exporter/internal/domain/model/options"
 	domain "github.com/webitel/media-exporter/internal/domain/model/pdf"
 	"github.com/webitel/media-exporter/internal/service"
@@ -15,18 +14,16 @@ import (
 )
 
 type PdfHandler struct {
-	service       service.PdfService
-	storageClient storage.FileServiceClient
+	service service.PdfService
 	pdfapi.UnimplementedPdfServiceServer
 }
 
-func NewPdfHandler(service service.PdfService, storageClient storage.FileServiceClient) (*PdfHandler, error) {
-	if service == nil || storageClient == nil {
+func NewPdfHandler(service service.PdfService) (*PdfHandler, error) {
+	if service == nil {
 		return nil, errors.Internal("PdfService or storageClient is nil")
 	}
 	return &PdfHandler{
-		service:       service,
-		storageClient: storageClient,
+		service: service,
 	}, nil
 }
 

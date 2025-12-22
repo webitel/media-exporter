@@ -127,7 +127,7 @@ func (s *PdfServiceImpl) createExportTask(
 		UploadedBy: opts.Auth.GetUserId(),
 		Status:     "pending",
 		AgentID:    agentID,
-		CallID:     callID, // Ensure your domain model supports CallID
+		CallID:     callID,
 		FileID:     fileID,
 	}
 
