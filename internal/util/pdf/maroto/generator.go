@@ -14,9 +14,8 @@ func GeneratePDF(files map[string]string, fileInfos map[string]*storage.File) ([
 	m := pdf.NewMaroto(consts.Portrait, consts.A4)
 	m.SetBorder(false)
 
-	imageHeight := 60.0
-	imageSpacing := 10.0
-	textHeight := 10.0
+	imageHeight := 230.0
+	textHeight := 20.0
 
 	type tmpFile struct {
 		Path      string
@@ -28,34 +27,46 @@ func GeneratePDF(files map[string]string, fileInfos map[string]*storage.File) ([
 	for id, path := range files {
 		file := fileInfos[id]
 		timestamp := "unknown"
-		if file.UploadedAt > 0 {
+		if file != nil && file.UploadedAt > 0 {
 			t := time.Unix(file.UploadedAt/1000, (file.UploadedAt%1000)*1e6)
 			timestamp = t.Format("15:04 02.01.2006")
 		}
-		tmpFiles = append(tmpFiles, tmpFile{Path: path, Name: file.Name, Timestamp: timestamp})
+		tmpFiles = append(tmpFiles, tmpFile{
+			Path:      path,
+			Name:      file.Name,
+			Timestamp: timestamp,
+		})
 	}
 
-	for i := 0; i < len(tmpFiles); i += 2 {
-		if tmpFiles[i].Path == "" {
+	for i, f := range tmpFiles {
+		if f.Path == "" {
 			continue
 		}
+
+		// --- Screenshot ---
 		m.Row(imageHeight, func() {
-			m.Col(6, func() { tryAddImage(m, tmpFiles[i].Path) })
-			if i+1 < len(tmpFiles) {
-				m.Col(6, func() { tryAddImage(m, tmpFiles[i+1].Path) })
-			}
-		})
-		m.Row(textHeight, func() {
-			m.Col(6, func() {
-				m.Text(tmpFiles[i].Name+"\n"+tmpFiles[i].Timestamp, props.Text{Size: 10, Align: consts.Center})
+			m.Col(12, func() {
+				tryAddImage(m, f.Path)
 			})
-			if i+1 < len(tmpFiles) {
-				m.Col(6, func() {
-					m.Text(tmpFiles[i+1].Name+"\n"+tmpFiles[i+1].Timestamp, props.Text{Size: 10, Align: consts.Center})
-				})
-			}
 		})
-		m.Row(imageSpacing, func() {})
+
+		// --- Metadata ---
+		m.Row(textHeight, func() {
+			m.Col(12, func() {
+				m.Text(
+					fmt.Sprintf("%s\n%s", f.Name, f.Timestamp),
+					props.Text{
+						Size:  10,
+						Align: consts.Center,
+					},
+				)
+			})
+		})
+
+		// --- New page except last ---
+		if i < len(tmpFiles)-1 {
+			m.AddPage()
+		}
 	}
 
 	buf, err := m.Output()
