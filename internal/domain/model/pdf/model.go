@@ -51,12 +51,14 @@ type PdfHistoryRequestOptions struct {
 	AgentID int64
 	Page    int32
 	Size    int32
+	Sort    string
 }
 
 type CallHistoryRequestOptions struct {
 	CallID string
 	Page   int32
 	Size   int32
+	Sort   string
 }
 
 // --- Task & Metadata Models ---

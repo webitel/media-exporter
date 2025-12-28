@@ -218,10 +218,12 @@ func (x *CreateCallExportRequest) GetFileIds() []int64 {
 
 // Request for retrieving paginated export history for an agent.
 type ListScreenrecordingHistoryRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AgentId       int64                  `protobuf:"varint,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	Page          int32                  `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"` // Page number (1-based).
-	Size          int32                  `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"` // Number of items per page.
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	AgentId int64                  `protobuf:"varint,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Page    int32                  `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"` // Page number (1-based).
+	Size    int32                  `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"` // Number of items per page.]
+	// SQL-like ordering: "updated_at desc", "name asc"
+	Sort          string `protobuf:"bytes,4,opt,name=sort,proto3" json:"sort,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -277,12 +279,21 @@ func (x *ListScreenrecordingHistoryRequest) GetSize() int32 {
 	return 0
 }
 
+func (x *ListScreenrecordingHistoryRequest) GetSort() string {
+	if x != nil {
+		return x.Sort
+	}
+	return ""
+}
+
 // Request for retrieving paginated export history for a call.
 type ListCallHistoryRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CallId        string                 `protobuf:"bytes,1,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
-	Page          int32                  `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"` // Page number (1-based).
-	Size          int32                  `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"` // Number of items per page.
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	CallId string                 `protobuf:"bytes,1,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
+	Page   int32                  `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"` // Page number (1-based).
+	Size   int32                  `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"` // Number of items per page.
+	// SQL-like ordering: "updated_at desc", "name asc"
+	Sort          string `protobuf:"bytes,4,opt,name=sort,proto3" json:"sort,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -336,6 +347,13 @@ func (x *ListCallHistoryRequest) GetSize() int32 {
 		return x.Size
 	}
 	return 0
+}
+
+func (x *ListCallHistoryRequest) GetSort() string {
+	if x != nil {
+		return x.Sort
+	}
+	return ""
 }
 
 // Response containing a page of export history records.
@@ -689,15 +707,17 @@ const file_pdf_proto_rawDesc = "" +
 	"\acall_id\x18\x01 \x01(\tR\x06callId\x12\x12\n" +
 	"\x04from\x18\x03 \x01(\x03R\x04from\x12\x0e\n" +
 	"\x02to\x18\x04 \x01(\x03R\x02to\x12\x19\n" +
-	"\bfile_ids\x18\x05 \x03(\x03R\afileIds\"f\n" +
+	"\bfile_ids\x18\x05 \x03(\x03R\afileIds\"z\n" +
 	"!ListScreenrecordingHistoryRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\x03R\aagentId\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x12\n" +
-	"\x04size\x18\x03 \x01(\x05R\x04size\"Y\n" +
+	"\x04size\x18\x03 \x01(\x05R\x04size\x12\x12\n" +
+	"\x04sort\x18\x04 \x01(\tR\x04sort\"m\n" +
 	"\x16ListCallHistoryRequest\x12\x17\n" +
 	"\acall_id\x18\x01 \x01(\tR\x06callId\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x12\n" +
-	"\x04size\x18\x03 \x01(\x05R\x04size\"y\n" +
+	"\x04size\x18\x03 \x01(\x05R\x04size\x12\x12\n" +
+	"\x04sort\x18\x04 \x01(\tR\x04sort\"y\n" +
 	"\x13ListExportsResponse\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x12\n" +
 	"\x04next\x18\x02 \x01(\bR\x04next\x12:\n" +
