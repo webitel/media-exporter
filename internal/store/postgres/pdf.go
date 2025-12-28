@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
@@ -30,7 +31,7 @@ func (m *Pdf) GetPdfExportHistory(req *domain.PdfHistoryRequestOptions) (*domain
 			sq.Expr("EXISTS (SELECT 1 FROM storage.files f WHERE f.id = h.file_id AND f.removed IS NULL)"),
 		},
 	}
-	return m.listHistory(filter, int64(req.Page), int64(req.Size))
+	return m.listHistory(filter, int64(req.Page), int64(req.Size), req.Sort)
 }
 
 // --- Call History ---
@@ -43,11 +44,11 @@ func (m *Pdf) GetCallPdfExportHistory(req *domain.CallHistoryRequestOptions) (*d
 			sq.Expr("EXISTS (SELECT 1 FROM storage.files f WHERE f.id = h.file_id AND f.removed IS NULL)"),
 		},
 	}
-	return m.listHistory(filter, int64(req.Page), int64(req.Size))
+	return m.listHistory(filter, int64(req.Page), int64(req.Size), req.Sort)
 }
 
 // Internal helper for paginated history fetching
-func (m *Pdf) listHistory(filter sq.Sqlizer, page, size int64) (*domain.HistoryResponse, error) {
+func (m *Pdf) listHistory(filter sq.Sqlizer, page, size int64, sort string) (*domain.HistoryResponse, error) {
 	db, err := m.storage.Database()
 	if err != nil {
 		return nil, dberr.NewDBInternalError("list_history", err)
@@ -71,7 +72,7 @@ func (m *Pdf) listHistory(filter sq.Sqlizer, page, size int64) (*domain.HistoryR
 		).
 		From("media_exporter.pdf_export_history h").
 		Where(filter).
-		OrderBy("h.uploaded_at DESC").
+		OrderBy(parseSort(sort)).
 		Offset(uint64(offset)).
 		Limit(uint64(limit))
 
@@ -166,7 +167,6 @@ func (m *Pdf) InsertPdfExportHistory(opts *options.CreateOptions, input *domain.
 		callID,
 		opts.Auth.GetDomainId(),
 	).Scan(&id)
-
 	if err != nil {
 		return 0, m.handlePgError("insert_export_history", err)
 	}
@@ -237,6 +237,37 @@ func (m *Pdf) handlePgError(op string, err error) error {
 		}
 	}
 	return dberr.NewDBInternalError(op, err)
+}
+
+func parseSort(orderBy string) string {
+	column := "h.updated_at"
+	direction := "DESC"
+
+	if orderBy == "" {
+		return column + " " + direction
+	}
+
+	allowed := map[string]string{
+		"created_at": "h.uploaded_at",
+		"updated_at": "h.updated_at",
+		"created_by": "h.uploaded_by",
+		"name":       "h.name",
+	}
+
+	parts := strings.Fields(strings.ToLower(orderBy))
+	if len(parts) != 2 {
+		return column + " " + direction
+	}
+
+	if col, ok := allowed[parts[0]]; ok {
+		column = col
+	}
+
+	if parts[1] == "asc" {
+		direction = "ASC"
+	}
+
+	return column + " " + direction
 }
 
 func NewPdfStore(store *Store) (store.PdfStore, error) {
