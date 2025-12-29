@@ -252,6 +252,7 @@ func parseSort(sort string) string {
 		"updated_at": "h.updated_at",
 		"created_by": "h.uploaded_by",
 		"name":       "h.name",
+		"status":     "h.status",
 	}
 
 	direction := defaultDirection
