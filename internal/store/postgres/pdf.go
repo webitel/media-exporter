@@ -239,12 +239,12 @@ func (m *Pdf) handlePgError(op string, err error) error {
 	return dberr.NewDBInternalError(op, err)
 }
 
-func parseSort(orderBy string) string {
-	column := "h.updated_at"
-	direction := "DESC"
+func parseSort(sort string) string {
+	defaultColumn := "h.updated_at"
+	defaultDirection := "DESC"
 
-	if orderBy == "" {
-		return column + " " + direction
+	if sort == "" {
+		return defaultColumn + " " + defaultDirection
 	}
 
 	allowed := map[string]string{
@@ -254,17 +254,25 @@ func parseSort(orderBy string) string {
 		"name":       "h.name",
 	}
 
-	parts := strings.Fields(strings.ToLower(orderBy))
-	if len(parts) != 2 {
-		return column + " " + direction
-	}
+	direction := defaultDirection
+	columnKey := sort
 
-	if col, ok := allowed[parts[0]]; ok {
-		column = col
-	}
-
-	if parts[1] == "asc" {
+	switch sort[0] {
+	case '+':
 		direction = "ASC"
+		columnKey = sort[1:]
+	case '-':
+		direction = "DESC"
+		columnKey = sort[1:]
+	default:
+		return defaultColumn + " " + defaultDirection
+	}
+
+	columnKey = strings.ToLower(strings.TrimSpace(columnKey))
+
+	column, ok := allowed[columnKey]
+	if !ok {
+		return defaultColumn + " " + defaultDirection
 	}
 
 	return column + " " + direction
