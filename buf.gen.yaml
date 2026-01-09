@@ -22,7 +22,7 @@ plugins:
     out: api/pdf
 
 inputs:
-  - directory: "../protos/media-exporter"
-#  - git_repo: "https://github.com/webitel/protos"
-#    branch: "main"
-#    subdir: media-exporter
+  # - directory: "../protos/media-exporter"
+ - git_repo: "https://github.com/webitel/protos"
+   branch: "v25.12"
+   subdir: media-exporter
