@@ -35,11 +35,11 @@ func (app *App) HandlePdfTask(ctx context.Context, session *model.Session, task 
 		return fmt.Errorf("channel missing for task %s: %w", task.TaskID, err)
 	}
 
-	filesResp, err := app.StorageClient.SearchScreenRecordings(ctx, &storage.SearchScreenRecordingsRequest{
+	filesResp, err := app.StorageClient.SearchScreenRecordingsByAgent(ctx, &storage.SearchScreenRecordingsByAgentRequest{
 		Id:      task.IDs,
 		Type:    storage.ScreenrecordingType_SCREENSHOT,
 		Channel: channel,
-		UserId:  task.UserID,
+		AgentId: task.AgentID,
 		UploadedAt: &engine.FilterBetween{
 			From: task.From,
 			To:   task.To,
