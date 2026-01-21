@@ -67,9 +67,9 @@ func GeneratePDF(
 		return nil, fmt.Errorf("no valid images found for PDF")
 	}
 
-	// --- Sort by time (oldest → newest) ---
+	// --- Sort by time (newest → oldest) ---
 	sort.Slice(items, func(i, j int) bool {
-		return items[i].Time.Before(items[j].Time)
+		return items[i].Time.After(items[j].Time)
 	})
 
 	// --- Build PDF ---
