@@ -40,6 +40,7 @@ func (app *App) HandlePdfTask(ctx context.Context, session *model.Session, task 
 		Type:    storage.ScreenrecordingType_SCREENSHOT,
 		Channel: channel,
 		AgentId: task.AgentID,
+		Size:    1000,
 		UploadedAt: &engine.FilterBetween{
 			From: task.From,
 			To:   task.To,
