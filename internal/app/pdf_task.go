@@ -35,25 +35,40 @@ func (app *App) HandlePdfTask(ctx context.Context, session *model.Session, task 
 		return fmt.Errorf("channel missing for task %s: %w", task.TaskID, err)
 	}
 
-	filesResp, err := app.StorageClient.SearchScreenRecordings(ctx, &storage.SearchScreenRecordingsRequest{
-		Id:      task.IDs,
-		Type:    storage.ScreenrecordingType_SCREENSHOT,
-		Channel: channel,
-		UploadedAt: &engine.FilterBetween{
-			From: task.From,
-			To:   task.To,
-		},
-	})
+	var filesResp *storage.ListFile
+
+	if task.AgentID != 0 {
+		filesResp, err = app.StorageClient.SearchScreenRecordingsByAgent(ctx, &storage.SearchScreenRecordingsByAgentRequest{
+			Id:      task.IDs,
+			Type:    storage.ScreenrecordingType_SCREENSHOT,
+			Channel: channel,
+			AgentId: task.AgentID,
+			Size:    1000,
+			UploadedAt: &engine.FilterBetween{
+				From: task.From,
+				To:   task.To,
+			},
+		})
+	} else {
+		filesResp, err = app.StorageClient.SearchScreenRecordings(ctx, &storage.SearchScreenRecordingsRequest{
+			Id:      task.IDs,
+			Type:    storage.ScreenrecordingType_SCREENSHOT,
+			Channel: channel,
+			Size:    1000,
+			UploadedAt: &engine.FilterBetween{
+				From: task.From,
+				To:   task.To,
+			},
+		})
+	}
+
+	if err != nil {
+		return fmt.Errorf("SearchScreenRecordings failed: %w", err)
+	}
 
 	if filesResp == nil || filesResp.Items == nil || len(filesResp.Items) == 0 {
 		_ = SetTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
 		return fmt.Errorf("failed to find files: %w", err)
-	}
-
-	if err != nil {
-		slog.ErrorContext(ctx, "SearchScreenRecordings failed", "taskID", task.TaskID, "error", err)
-		_ = SetTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
-		return fmt.Errorf("search recordings failed: %w", err)
 	}
 
 	tmpFiles, fileInfos, err := downloadScreenshotsForPDF(ctx, session, app, filesResp.Items)
