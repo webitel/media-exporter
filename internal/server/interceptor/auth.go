@@ -16,7 +16,6 @@ const (
 // AuthUnaryServerInterceptor authenticates and authorizes unary RPCs.
 func AuthUnaryServerInterceptor(authManager auth.Manager) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-
 		session, err := authManager.AuthorizeFromContext(ctx)
 		if err != nil {
 			return nil, errors.New(
@@ -24,22 +23,6 @@ func AuthUnaryServerInterceptor(authManager auth.Manager) grpc.UnaryServerInterc
 				errors.WithCause(err),
 				errors.WithCode(codes.Unauthenticated),
 				errors.WithID("auth.interceptor.unauthorized"),
-			)
-		}
-
-		hasPermission := false
-		for _, perm := range session.GetPermissions() {
-			if perm == "control_agent_screen" {
-				hasPermission = true
-				break
-			}
-		}
-		if !hasPermission {
-			return nil, errors.New(
-				"permission denied",
-				errors.WithCode(codes.PermissionDenied),
-				errors.WithCause(errors.New("missing required permission control_agent_screen")),
-				errors.WithID("auth.interceptor.permission"),
 			)
 		}
 
