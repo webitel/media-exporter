@@ -64,7 +64,7 @@ func sendFileMetadata(stream storage.FileService_UploadFileClient, session *mode
 func ParseUploadFileChannel(channel string) (storage.UploadFileChannel, error) {
 	switch channel {
 	case "call":
-		return storage.UploadFileChannel_ScreenRecordingChannel, nil
+		return storage.UploadFileChannel_CallChannel, nil
 	case "screenrecording":
 		return storage.UploadFileChannel_ScreenRecordingChannel, nil
 	default:
