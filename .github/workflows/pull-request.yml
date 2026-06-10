@@ -51,6 +51,7 @@ jobs:
       package-description: ${{ github.event.repository.description }}
       package-contents: |
         src=deploy/systemd/webitel-media-exporter.service dst=/etc/systemd/system/webitel-media-exporter.service type=config
+        src=.env.example dst=/etc/default/webitel-media-exporter type=config
         
 
       scripts: |
