@@ -8,6 +8,8 @@ StartLimitBurst=3
 Type=simple
 User=webitel
 Group=webitel
+LogsDirectory=webitel
+CacheDirectory=webitel-media-exporter
 
 EnvironmentFile=/etc/default/webitel-media-exporter
 EnvironmentFile=-/etc/default/webitel-otel
