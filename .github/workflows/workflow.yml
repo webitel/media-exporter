@@ -50,6 +50,7 @@ jobs:
       binary-name: webitel-media-exporter
       ldflags: >
         -s -w
+        -X github.com/webitel/media-exporter/internal/domain/model.CurrentVersion=${{ needs.prepare.outputs.version }}
         
 
       version: ${{ needs.prepare.outputs.version }}
