@@ -42,7 +42,7 @@ jobs:
       binary-name: webitel-media-exporter
       ldflags: >
         -s -w
-        -X github.com/webitel/media-exporter/internal/domain/model.CurrentVersion=${{ needs.prepare.outputs.version }}
+        -X github.com/webitel/media-exporter/internal/domain/model.CurrentVersion=${{ format('{0}{1}', needs.prepare.outputs.version, (github.event.repository.default_branch == github.ref_name || github.event.pull_request.number) && '-dev' || '') }}
         
 
       version: ${{ needs.prepare.outputs.version }}
