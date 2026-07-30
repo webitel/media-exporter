@@ -76,6 +76,17 @@ var WebitelAPI = WebitelServicesInfo{
 					},
 				},
 			},
+			"DownloadCallArchive": WebitelMethod{
+				Access: 0,
+				Input:  "DownloadCallArchiveRequest",
+				Output: "DownloadCallArchiveResponse",
+				HttpBindings: []*HttpBinding{
+					{
+						Path:   "/calls/{call_id}/exports/archive",
+						Method: "GET",
+					},
+				},
+			},
 			"DeleteExport": WebitelMethod{
 				Access: 0,
 				Input:  "DeleteExportRequest",

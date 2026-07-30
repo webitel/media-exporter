@@ -7,7 +7,9 @@ import (
 	"github.com/webitel/media-exporter/internal/domain/model/options"
 	domain "github.com/webitel/media-exporter/internal/domain/model/pdf"
 	"github.com/webitel/media-exporter/internal/service"
+	googlegrpc "google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
 	"github.com/webitel/media-exporter/internal/errors"
@@ -123,6 +125,58 @@ func (h *PdfHandler) ListCallExports(ctx context.Context, req *pdfapi.ListCallHi
 	}
 
 	return convertToProtoHistoryResponse(internalResponse, int64(req.Size), int64(req.Page)), nil
+}
+
+// --- Call Archive (ZIP) Exports ---
+
+func (h *PdfHandler) DownloadCallArchive(req *pdfapi.DownloadCallArchiveRequest, stream pdfapi.PdfService_DownloadCallArchiveServer) error {
+	if req.CallId == "" {
+		return status.Error(codes.InvalidArgument, "call_id is required")
+	}
+
+	ctx := stream.Context()
+
+	opts, err := options.NewCreateOptions(ctx)
+	if err != nil {
+		return err
+	}
+
+	archiveMeta, err := h.service.PrepareCallArchiveMetadata(ctx, &domain.DownloadCallArchiveRequest{
+		CallID:  req.GetCallId(),
+		FileIDs: req.GetFileIds(),
+	})
+	if err != nil {
+		return err
+	}
+
+	// Sent as gRPC response headers (before any data frame)
+	if err := googlegrpc.SetHeader(ctx, metadata.Pairs("filename", archiveMeta.Name, "format", "zip")); err != nil {
+		return err
+	}
+
+	w := &archiveChunkWriter{stream: stream}
+
+	return h.service.DownloadCallArchive(ctx, opts, &domain.DownloadCallArchiveRequest{
+		CallID:  req.GetCallId(),
+		FileIDs: req.GetFileIds(),
+	}, w)
+}
+
+// archiveChunkWriter adapts the outbound gRPC stream to an io.Writer so the ZIP builder in
+// the service layer can stay agnostic of gRPC/proto specifics.
+type archiveChunkWriter struct {
+	stream pdfapi.PdfService_DownloadCallArchiveServer
+}
+
+func (w *archiveChunkWriter) Write(p []byte) (int, error) {
+	chunk := make([]byte, len(p))
+	copy(chunk, p)
+
+	if err := w.stream.Send(&pdfapi.DownloadCallArchiveResponse{Data: chunk}); err != nil {
+		return 0, err
+	}
+
+	return len(p), nil
 }
 
 // --- General Operations ---

@@ -39,6 +39,11 @@ func BuildServer(config *conf.ConsulConfig, authManager auth.Manager, exitChan c
 			interceptor.AuthUnaryServerInterceptor(authManager),
 			interceptor.ValidateUnaryServerInterceptor(val),
 		),
+		grpc.ChainStreamInterceptor(
+			interceptor.OuterStreamInterceptor(),
+			interceptor.AuthStreamServerInterceptor(authManager),
+			interceptor.ValidateStreamServerInterceptor(val),
+		),
 	)
 
 	// Open a TCP listener on the configured address
