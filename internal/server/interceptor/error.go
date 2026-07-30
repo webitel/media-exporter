@@ -27,18 +27,35 @@ func OuterInterceptor() grpc.UnaryServerInterceptor {
 		}()
 		resp, err := handler(ctx, req)
 		if err != nil {
-			return nil, logAndReturnGRPCError(ctx, err, info)
+			return nil, logAndReturnGRPCError(ctx, err, info.FullMethod)
 		}
 		return resp, nil
 	}
 }
 
+func OuterStreamInterceptor() grpc.StreamServerInterceptor {
+	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
+		ctx := ss.Context()
+		defer func() {
+			if panicErr := recover(); panicErr != nil {
+				slog.ErrorContext(ctx, "[PANIC RECOVER]", slog.Any("err", panicErr), slog.String("stack", string(debug.Stack())))
+				err = status.Error(codes.Internal, "internal error")
+			}
+		}()
+
+		if err := handler(srv, ss); err != nil {
+			return logAndReturnGRPCError(ctx, err, info.FullMethod)
+		}
+		return nil
+	}
+}
+
 // logAndReturnGRPCError logs the error and converts it to a gRPC error response.
-func logAndReturnGRPCError(ctx context.Context, err error, info *grpc.UnaryServerInfo) error {
+func logAndReturnGRPCError(ctx context.Context, err error, fullMethod string) error {
 	if err == nil {
 		return nil
 	}
-	slog.WarnContext(ctx, fmt.Sprintf("method %s, error: %v", info.FullMethod, err.Error()))
+	slog.WarnContext(ctx, fmt.Sprintf("method %s, error: %v", fullMethod, err.Error()))
 	span := trace.SpanFromContext(ctx) // OpenTelemetry tracing
 	span.RecordError(err)
 

@@ -36,3 +36,33 @@ func AuthUnaryServerInterceptor(authManager auth.Manager) grpc.UnaryServerInterc
 		return resp, nil
 	}
 }
+
+// AuthStreamServerInterceptor mirrors AuthUnaryServerInterceptor for streaming RPCs.
+func AuthStreamServerInterceptor(authManager auth.Manager) grpc.StreamServerInterceptor {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		ctx := ss.Context()
+
+		session, err := authManager.AuthorizeFromContext(ctx)
+		if err != nil {
+			return errors.New(
+				"unauthorized",
+				errors.WithCause(err),
+				errors.WithCode(codes.Unauthenticated),
+				errors.WithID("auth.interceptor.unauthorized"),
+			)
+		}
+
+		ctx = context.WithValue(ctx, SessionHeader, session)
+
+		return handler(srv, &authenticatedServerStream{ServerStream: ss, ctx: ctx})
+	}
+}
+
+type authenticatedServerStream struct {
+	grpc.ServerStream
+	ctx context.Context
+}
+
+func (s *authenticatedServerStream) Context() context.Context {
+	return s.ctx
+}

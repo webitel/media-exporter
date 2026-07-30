@@ -216,13 +216,113 @@ func (x *CreateCallExportRequest) GetFileIds() []int64 {
 	return nil
 }
 
+// Request for streaming a ZIP archive of already-uploaded call files (e.g. PDF exports).
+type DownloadCallArchiveRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CallId        string                 `protobuf:"bytes,1,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`            // Unique identifier of the call.
+	FileIds       []int64                `protobuf:"varint,2,rep,packed,name=file_ids,json=fileIds,proto3" json:"file_ids,omitempty"` // IDs of already-uploaded files (e.g. PDFs) to bundle into one ZIP archive.
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DownloadCallArchiveRequest) Reset() {
+	*x = DownloadCallArchiveRequest{}
+	mi := &file_pdf_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DownloadCallArchiveRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DownloadCallArchiveRequest) ProtoMessage() {}
+
+func (x *DownloadCallArchiveRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_pdf_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DownloadCallArchiveRequest.ProtoReflect.Descriptor instead.
+func (*DownloadCallArchiveRequest) Descriptor() ([]byte, []int) {
+	return file_pdf_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *DownloadCallArchiveRequest) GetCallId() string {
+	if x != nil {
+		return x.CallId
+	}
+	return ""
+}
+
+func (x *DownloadCallArchiveRequest) GetFileIds() []int64 {
+	if x != nil {
+		return x.FileIds
+	}
+	return nil
+}
+
+// One frame of a streamed ZIP archive download. The file name is carried via the "filename"
+// gRPC response header (set before the first frame), mirroring how CasesService.ExportCases
+// streams its output — not a field on this message.
+type DownloadCallArchiveResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Data          []byte                 `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DownloadCallArchiveResponse) Reset() {
+	*x = DownloadCallArchiveResponse{}
+	mi := &file_pdf_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DownloadCallArchiveResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DownloadCallArchiveResponse) ProtoMessage() {}
+
+func (x *DownloadCallArchiveResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pdf_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DownloadCallArchiveResponse.ProtoReflect.Descriptor instead.
+func (*DownloadCallArchiveResponse) Descriptor() ([]byte, []int) {
+	return file_pdf_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *DownloadCallArchiveResponse) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
 // Request for retrieving paginated export history for an agent.
 type ListScreenrecordingHistoryRequest struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	AgentId int64                  `protobuf:"varint,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	Page    int32                  `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"` // Page number (1-based).
-	Size    int32                  `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"` // Number of items per page.]
-	// SQL-like ordering: "updated_at desc", "name asc"
+	Size    int32                  `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"` // Number of items per page.
+	// sorting criteria, e.g. "+created_at" or "-name"
 	Sort          string `protobuf:"bytes,4,opt,name=sort,proto3" json:"sort,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -230,7 +330,7 @@ type ListScreenrecordingHistoryRequest struct {
 
 func (x *ListScreenrecordingHistoryRequest) Reset() {
 	*x = ListScreenrecordingHistoryRequest{}
-	mi := &file_pdf_proto_msgTypes[2]
+	mi := &file_pdf_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -242,7 +342,7 @@ func (x *ListScreenrecordingHistoryRequest) String() string {
 func (*ListScreenrecordingHistoryRequest) ProtoMessage() {}
 
 func (x *ListScreenrecordingHistoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[2]
+	mi := &file_pdf_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -255,7 +355,7 @@ func (x *ListScreenrecordingHistoryRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ListScreenrecordingHistoryRequest.ProtoReflect.Descriptor instead.
 func (*ListScreenrecordingHistoryRequest) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{2}
+	return file_pdf_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ListScreenrecordingHistoryRequest) GetAgentId() int64 {
@@ -292,7 +392,7 @@ type ListCallHistoryRequest struct {
 	CallId string                 `protobuf:"bytes,1,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
 	Page   int32                  `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"` // Page number (1-based).
 	Size   int32                  `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"` // Number of items per page.
-	// SQL-like ordering: "updated_at desc", "name asc"
+	// sorting criteria, e.g. "+created_at" or "-name"
 	Sort          string `protobuf:"bytes,4,opt,name=sort,proto3" json:"sort,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -300,7 +400,7 @@ type ListCallHistoryRequest struct {
 
 func (x *ListCallHistoryRequest) Reset() {
 	*x = ListCallHistoryRequest{}
-	mi := &file_pdf_proto_msgTypes[3]
+	mi := &file_pdf_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -312,7 +412,7 @@ func (x *ListCallHistoryRequest) String() string {
 func (*ListCallHistoryRequest) ProtoMessage() {}
 
 func (x *ListCallHistoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[3]
+	mi := &file_pdf_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -325,7 +425,7 @@ func (x *ListCallHistoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCallHistoryRequest.ProtoReflect.Descriptor instead.
 func (*ListCallHistoryRequest) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{3}
+	return file_pdf_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ListCallHistoryRequest) GetCallId() string {
@@ -368,7 +468,7 @@ type ListExportsResponse struct {
 
 func (x *ListExportsResponse) Reset() {
 	*x = ListExportsResponse{}
-	mi := &file_pdf_proto_msgTypes[4]
+	mi := &file_pdf_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -380,7 +480,7 @@ func (x *ListExportsResponse) String() string {
 func (*ListExportsResponse) ProtoMessage() {}
 
 func (x *ListExportsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[4]
+	mi := &file_pdf_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -393,7 +493,7 @@ func (x *ListExportsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListExportsResponse.ProtoReflect.Descriptor instead.
 func (*ListExportsResponse) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{4}
+	return file_pdf_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListExportsResponse) GetPage() int32 {
@@ -431,7 +531,7 @@ type ExportTask struct {
 
 func (x *ExportTask) Reset() {
 	*x = ExportTask{}
-	mi := &file_pdf_proto_msgTypes[5]
+	mi := &file_pdf_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -443,7 +543,7 @@ func (x *ExportTask) String() string {
 func (*ExportTask) ProtoMessage() {}
 
 func (x *ExportTask) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[5]
+	mi := &file_pdf_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -456,7 +556,7 @@ func (x *ExportTask) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportTask.ProtoReflect.Descriptor instead.
 func (*ExportTask) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{5}
+	return file_pdf_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ExportTask) GetTaskId() string {
@@ -512,7 +612,7 @@ type ExportRecord struct {
 
 func (x *ExportRecord) Reset() {
 	*x = ExportRecord{}
-	mi := &file_pdf_proto_msgTypes[6]
+	mi := &file_pdf_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -524,7 +624,7 @@ func (x *ExportRecord) String() string {
 func (*ExportRecord) ProtoMessage() {}
 
 func (x *ExportRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[6]
+	mi := &file_pdf_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -537,7 +637,7 @@ func (x *ExportRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportRecord.ProtoReflect.Descriptor instead.
 func (*ExportRecord) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{6}
+	return file_pdf_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ExportRecord) GetId() int64 {
@@ -613,7 +713,7 @@ type DeleteExportRequest struct {
 
 func (x *DeleteExportRequest) Reset() {
 	*x = DeleteExportRequest{}
-	mi := &file_pdf_proto_msgTypes[7]
+	mi := &file_pdf_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -625,7 +725,7 @@ func (x *DeleteExportRequest) String() string {
 func (*DeleteExportRequest) ProtoMessage() {}
 
 func (x *DeleteExportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[7]
+	mi := &file_pdf_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -638,7 +738,7 @@ func (x *DeleteExportRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteExportRequest.ProtoReflect.Descriptor instead.
 func (*DeleteExportRequest) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{7}
+	return file_pdf_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DeleteExportRequest) GetId() int64 {
@@ -658,7 +758,7 @@ type DeleteExportResponse struct {
 
 func (x *DeleteExportResponse) Reset() {
 	*x = DeleteExportResponse{}
-	mi := &file_pdf_proto_msgTypes[8]
+	mi := &file_pdf_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -670,7 +770,7 @@ func (x *DeleteExportResponse) String() string {
 func (*DeleteExportResponse) ProtoMessage() {}
 
 func (x *DeleteExportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[8]
+	mi := &file_pdf_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -683,7 +783,7 @@ func (x *DeleteExportResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteExportResponse.ProtoReflect.Descriptor instead.
 func (*DeleteExportResponse) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{8}
+	return file_pdf_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *DeleteExportResponse) GetId() int64 {
@@ -707,7 +807,12 @@ const file_pdf_proto_rawDesc = "" +
 	"\acall_id\x18\x01 \x01(\tR\x06callId\x12\x12\n" +
 	"\x04from\x18\x03 \x01(\x03R\x04from\x12\x0e\n" +
 	"\x02to\x18\x04 \x01(\x03R\x02to\x12\x19\n" +
-	"\bfile_ids\x18\x05 \x03(\x03R\afileIds\"z\n" +
+	"\bfile_ids\x18\x05 \x03(\x03R\afileIds\"P\n" +
+	"\x1aDownloadCallArchiveRequest\x12\x17\n" +
+	"\acall_id\x18\x01 \x01(\tR\x06callId\x12\x19\n" +
+	"\bfile_ids\x18\x02 \x03(\x03R\afileIds\"1\n" +
+	"\x1bDownloadCallArchiveResponse\x12\x12\n" +
+	"\x04data\x18\x01 \x01(\fR\x04data\"z\n" +
 	"!ListScreenrecordingHistoryRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\x03R\aagentId\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x12\n" +
@@ -754,13 +859,14 @@ const file_pdf_proto_rawDesc = "" +
 	"PROCESSING\x10\x02\x12\b\n" +
 	"\x04DONE\x10\x03\x12\n" +
 	"\n" +
-	"\x06FAILED\x10\x042\xbb\x06\n" +
+	"\x06FAILED\x10\x042\xe8\a\n" +
 	"\n" +
 	"PdfService\x12\xb3\x01\n" +
 	"\x1bCreateScreenrecordingExport\x124.webitel_media_exporter.CreateScreenrecordingRequest\x1a\".webitel_media_exporter.ExportTask\":\x82\xd3\xe4\x93\x024:\x01*\"//agents/{agent_id}/exports/pdf/screenrecordings\x12\xbd\x01\n" +
 	"\x1aListScreenrecordingExports\x129.webitel_media_exporter.ListScreenrecordingHistoryRequest\x1a+.webitel_media_exporter.ListExportsResponse\"7\x82\xd3\xe4\x93\x021\x12//agents/{agent_id}/exports/pdf/screenrecordings\x12\x90\x01\n" +
 	"\x10CreateCallExport\x12/.webitel_media_exporter.CreateCallExportRequest\x1a\".webitel_media_exporter.ExportTask\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/calls/{call_id}/exports/pdf\x12\x94\x01\n" +
-	"\x0fListCallExports\x12..webitel_media_exporter.ListCallHistoryRequest\x1a+.webitel_media_exporter.ListExportsResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/calls/{call_id}/exports/pdf\x12\x8c\x01\n" +
+	"\x0fListCallExports\x12..webitel_media_exporter.ListCallHistoryRequest\x1a+.webitel_media_exporter.ListExportsResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/calls/{call_id}/exports/pdf\x12\xaa\x01\n" +
+	"\x13DownloadCallArchive\x122.webitel_media_exporter.DownloadCallArchiveRequest\x1a3.webitel_media_exporter.DownloadCallArchiveResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /calls/{call_id}/exports/archive0\x01\x12\x8c\x01\n" +
 	"\fDeleteExport\x12+.webitel_media_exporter.DeleteExportRequest\x1a,.webitel_media_exporter.DeleteExportResponse\"!\x82\xd3\xe4\x93\x02\x1b*\x19/exports/pdf/history/{id}B\xba\x01\n" +
 	"\x1acom.webitel_media_exporterB\bPdfProtoP\x01Z\"github.com/webitel/pdf/api/pdf;pdf\xa2\x02\x03WXX\xaa\x02\x14WebitelMediaExporter\xca\x02\x14WebitelMediaExporter\xe2\x02 WebitelMediaExporter\\GPBMetadata\xea\x02\x14WebitelMediaExporterb\x06proto3"
 
@@ -777,38 +883,42 @@ func file_pdf_proto_rawDescGZIP() []byte {
 }
 
 var file_pdf_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_pdf_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_pdf_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_pdf_proto_goTypes = []any{
 	(ExportStatus)(0),                         // 0: webitel_media_exporter.ExportStatus
 	(*CreateScreenrecordingRequest)(nil),      // 1: webitel_media_exporter.CreateScreenrecordingRequest
 	(*CreateCallExportRequest)(nil),           // 2: webitel_media_exporter.CreateCallExportRequest
-	(*ListScreenrecordingHistoryRequest)(nil), // 3: webitel_media_exporter.ListScreenrecordingHistoryRequest
-	(*ListCallHistoryRequest)(nil),            // 4: webitel_media_exporter.ListCallHistoryRequest
-	(*ListExportsResponse)(nil),               // 5: webitel_media_exporter.ListExportsResponse
-	(*ExportTask)(nil),                        // 6: webitel_media_exporter.ExportTask
-	(*ExportRecord)(nil),                      // 7: webitel_media_exporter.ExportRecord
-	(*DeleteExportRequest)(nil),               // 8: webitel_media_exporter.DeleteExportRequest
-	(*DeleteExportResponse)(nil),              // 9: webitel_media_exporter.DeleteExportResponse
+	(*DownloadCallArchiveRequest)(nil),        // 3: webitel_media_exporter.DownloadCallArchiveRequest
+	(*DownloadCallArchiveResponse)(nil),       // 4: webitel_media_exporter.DownloadCallArchiveResponse
+	(*ListScreenrecordingHistoryRequest)(nil), // 5: webitel_media_exporter.ListScreenrecordingHistoryRequest
+	(*ListCallHistoryRequest)(nil),            // 6: webitel_media_exporter.ListCallHistoryRequest
+	(*ListExportsResponse)(nil),               // 7: webitel_media_exporter.ListExportsResponse
+	(*ExportTask)(nil),                        // 8: webitel_media_exporter.ExportTask
+	(*ExportRecord)(nil),                      // 9: webitel_media_exporter.ExportRecord
+	(*DeleteExportRequest)(nil),               // 10: webitel_media_exporter.DeleteExportRequest
+	(*DeleteExportResponse)(nil),              // 11: webitel_media_exporter.DeleteExportResponse
 }
 var file_pdf_proto_depIdxs = []int32{
-	7, // 0: webitel_media_exporter.ListExportsResponse.items:type_name -> webitel_media_exporter.ExportRecord
-	0, // 1: webitel_media_exporter.ExportTask.status:type_name -> webitel_media_exporter.ExportStatus
-	0, // 2: webitel_media_exporter.ExportRecord.status:type_name -> webitel_media_exporter.ExportStatus
-	1, // 3: webitel_media_exporter.PdfService.CreateScreenrecordingExport:input_type -> webitel_media_exporter.CreateScreenrecordingRequest
-	3, // 4: webitel_media_exporter.PdfService.ListScreenrecordingExports:input_type -> webitel_media_exporter.ListScreenrecordingHistoryRequest
-	2, // 5: webitel_media_exporter.PdfService.CreateCallExport:input_type -> webitel_media_exporter.CreateCallExportRequest
-	4, // 6: webitel_media_exporter.PdfService.ListCallExports:input_type -> webitel_media_exporter.ListCallHistoryRequest
-	8, // 7: webitel_media_exporter.PdfService.DeleteExport:input_type -> webitel_media_exporter.DeleteExportRequest
-	6, // 8: webitel_media_exporter.PdfService.CreateScreenrecordingExport:output_type -> webitel_media_exporter.ExportTask
-	5, // 9: webitel_media_exporter.PdfService.ListScreenrecordingExports:output_type -> webitel_media_exporter.ListExportsResponse
-	6, // 10: webitel_media_exporter.PdfService.CreateCallExport:output_type -> webitel_media_exporter.ExportTask
-	5, // 11: webitel_media_exporter.PdfService.ListCallExports:output_type -> webitel_media_exporter.ListExportsResponse
-	9, // 12: webitel_media_exporter.PdfService.DeleteExport:output_type -> webitel_media_exporter.DeleteExportResponse
-	8, // [8:13] is the sub-list for method output_type
-	3, // [3:8] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	9,  // 0: webitel_media_exporter.ListExportsResponse.items:type_name -> webitel_media_exporter.ExportRecord
+	0,  // 1: webitel_media_exporter.ExportTask.status:type_name -> webitel_media_exporter.ExportStatus
+	0,  // 2: webitel_media_exporter.ExportRecord.status:type_name -> webitel_media_exporter.ExportStatus
+	1,  // 3: webitel_media_exporter.PdfService.CreateScreenrecordingExport:input_type -> webitel_media_exporter.CreateScreenrecordingRequest
+	5,  // 4: webitel_media_exporter.PdfService.ListScreenrecordingExports:input_type -> webitel_media_exporter.ListScreenrecordingHistoryRequest
+	2,  // 5: webitel_media_exporter.PdfService.CreateCallExport:input_type -> webitel_media_exporter.CreateCallExportRequest
+	6,  // 6: webitel_media_exporter.PdfService.ListCallExports:input_type -> webitel_media_exporter.ListCallHistoryRequest
+	3,  // 7: webitel_media_exporter.PdfService.DownloadCallArchive:input_type -> webitel_media_exporter.DownloadCallArchiveRequest
+	10, // 8: webitel_media_exporter.PdfService.DeleteExport:input_type -> webitel_media_exporter.DeleteExportRequest
+	8,  // 9: webitel_media_exporter.PdfService.CreateScreenrecordingExport:output_type -> webitel_media_exporter.ExportTask
+	7,  // 10: webitel_media_exporter.PdfService.ListScreenrecordingExports:output_type -> webitel_media_exporter.ListExportsResponse
+	8,  // 11: webitel_media_exporter.PdfService.CreateCallExport:output_type -> webitel_media_exporter.ExportTask
+	7,  // 12: webitel_media_exporter.PdfService.ListCallExports:output_type -> webitel_media_exporter.ListExportsResponse
+	4,  // 13: webitel_media_exporter.PdfService.DownloadCallArchive:output_type -> webitel_media_exporter.DownloadCallArchiveResponse
+	11, // 14: webitel_media_exporter.PdfService.DeleteExport:output_type -> webitel_media_exporter.DeleteExportResponse
+	9,  // [9:15] is the sub-list for method output_type
+	3,  // [3:9] is the sub-list for method input_type
+	3,  // [3:3] is the sub-list for extension type_name
+	3,  // [3:3] is the sub-list for extension extendee
+	0,  // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_pdf_proto_init() }
@@ -822,7 +932,7 @@ func file_pdf_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pdf_proto_rawDesc), len(file_pdf_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

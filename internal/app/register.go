@@ -31,6 +31,7 @@ func RegisterServices(grpcServer *grpc.Server, appInstance *App) {
 					a.Store.Pdf(),
 					a.Cache,
 					log,
+					a.StorageClient,
 				)
 				if err != nil {
 					return nil, fmt.Errorf("failed to init pdf s: %w", err)

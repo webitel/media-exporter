@@ -47,6 +47,19 @@ type GenerateCallExportRequest struct {
 	To      int64
 }
 
+// DownloadCallArchiveRequest bundles already-uploaded call files (e.g. PDF exports) into one
+// ZIP archive, streamed back synchronously rather than tracked as a background task.
+type DownloadCallArchiveRequest struct {
+	CallID  string
+	FileIDs []int64
+}
+
+// ArchiveMetadata describes the archive before its bytes start streaming.
+type ArchiveMetadata struct {
+	Name     string
+	MimeType string
+}
+
 type PdfHistoryRequestOptions struct {
 	AgentID int64
 	Page    int32

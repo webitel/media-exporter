@@ -11,7 +11,6 @@ import (
 
 const (
 	PdfExportType       = "pdf"
-	ZipExportType       = "zip"
 	authorizationHeader = "x-webitel-access"
 )
 
@@ -57,8 +56,6 @@ func (app *App) StartExportWorker(ctx context.Context) {
 							slog.ErrorContext(ctx, "PDF task failed", "taskID", task.TaskID, "error", err)
 							_ = app.Cache.ClearExportTask(task.TaskID)
 						}
-					case ZipExportType:
-						panic("not implemented")
 					default:
 						slog.WarnContext(ctx, "unknown export type",
 							"workerID", workerID,

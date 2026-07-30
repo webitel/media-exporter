@@ -42,6 +42,23 @@ func SavePDFToTemp(path string, pdfBytes []byte) error {
 	return nil
 }
 
+func ForwardIncomingHeaders(ctx context.Context, keys []string) context.Context {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return ctx
+	}
+	pairs := make([]string, 0, len(keys)*2)
+	for _, k := range keys {
+		if v := md.Get(k); len(v) > 0 {
+			pairs = append(pairs, k, v[0])
+		}
+	}
+	if len(pairs) == 0 {
+		return ctx
+	}
+	return metadata.NewOutgoingContext(ctx, metadata.Pairs(pairs...))
+}
+
 // build a new context.Background() with outgoing metadata created from headers map
 func ContextWithHeaders(headers map[string]string) context.Context {
 	ctx := context.Background()
