@@ -80,11 +80,13 @@ func (ExportStatus) EnumDescriptor() ([]byte, []int) {
 
 // Request for generating a screen recording PDF.
 type CreateScreenrecordingRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AgentId       int64                  `protobuf:"varint,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`        // Unique identifier of the agent.
-	From          int64                  `protobuf:"varint,2,opt,name=from,proto3" json:"from,omitempty"`                             // Start timestamp of the range (Unix millis).
-	To            int64                  `protobuf:"varint,3,opt,name=to,proto3" json:"to,omitempty"`                                 // End timestamp of the range (Unix millis).
-	FileIds       []int64                `protobuf:"varint,4,rep,packed,name=file_ids,json=fileIds,proto3" json:"file_ids,omitempty"` // Optional: specific file IDs to include in the PDF.
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	AgentId int64                  `protobuf:"varint,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`        // Unique identifier of the agent.
+	From    int64                  `protobuf:"varint,2,opt,name=from,proto3" json:"from,omitempty"`                             // Start timestamp of the range (Unix millis).
+	To      int64                  `protobuf:"varint,3,opt,name=to,proto3" json:"to,omitempty"`                                 // End timestamp of the range (Unix millis).
+	FileIds []int64                `protobuf:"varint,4,rep,packed,name=file_ids,json=fileIds,proto3" json:"file_ids,omitempty"` // Optional: specific file IDs to include in the PDF.
+	// sorting criteria, e.g. "+view_name" or "-uploaded_at"
+	Sort          string `protobuf:"bytes,5,opt,name=sort,proto3" json:"sort,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -145,6 +147,13 @@ func (x *CreateScreenrecordingRequest) GetFileIds() []int64 {
 		return x.FileIds
 	}
 	return nil
+}
+
+func (x *CreateScreenrecordingRequest) GetSort() string {
+	if x != nil {
+		return x.Sort
+	}
+	return ""
 }
 
 // Request for generating a call media PDF.
@@ -270,8 +279,7 @@ func (x *DownloadCallArchiveRequest) GetFileIds() []int64 {
 }
 
 // One frame of a streamed ZIP archive download. The file name is carried via the "filename"
-// gRPC response header (set before the first frame), mirroring how CasesService.ExportCases
-// streams its output — not a field on this message.
+// gRPC response header (set before the first frame)
 type DownloadCallArchiveResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Data          []byte                 `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
@@ -797,12 +805,13 @@ var File_pdf_proto protoreflect.FileDescriptor
 
 const file_pdf_proto_rawDesc = "" +
 	"\n" +
-	"\tpdf.proto\x12\x16webitel_media_exporter\x1a\x1cgoogle/api/annotations.proto\"x\n" +
+	"\tpdf.proto\x12\x16webitel_media_exporter\x1a\x1cgoogle/api/annotations.proto\"\x8c\x01\n" +
 	"\x1cCreateScreenrecordingRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\x03R\aagentId\x12\x12\n" +
 	"\x04from\x18\x02 \x01(\x03R\x04from\x12\x0e\n" +
 	"\x02to\x18\x03 \x01(\x03R\x02to\x12\x19\n" +
-	"\bfile_ids\x18\x04 \x03(\x03R\afileIds\"q\n" +
+	"\bfile_ids\x18\x04 \x03(\x03R\afileIds\x12\x12\n" +
+	"\x04sort\x18\x05 \x01(\tR\x04sort\"q\n" +
 	"\x17CreateCallExportRequest\x12\x17\n" +
 	"\acall_id\x18\x01 \x01(\tR\x06callId\x12\x12\n" +
 	"\x04from\x18\x03 \x01(\x03R\x04from\x12\x0e\n" +

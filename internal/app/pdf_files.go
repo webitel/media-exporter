@@ -14,9 +14,8 @@ import (
 	"github.com/webitel/media-exporter/internal/util"
 )
 
-func downloadScreenshotsForPDF(ctx context.Context, session *model.Session, app *App, files []*storage.File) (map[string]string, map[string]*storage.File, error) {
+func downloadScreenshotsForPDF(ctx context.Context, session *model.Session, app *App, files []*storage.File) (map[string]string, error) {
 	tmpFiles := make(map[string]string)
-	fileInfos := make(map[string]*storage.File)
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
@@ -34,7 +33,6 @@ func downloadScreenshotsForPDF(ctx context.Context, session *model.Session, app 
 			}
 			mu.Lock()
 			tmpFiles[fmt.Sprint(f.Id)] = tmpPath
-			fileInfos[fmt.Sprint(f.Id)] = f
 			mu.Unlock()
 		}(f)
 	}
@@ -44,11 +42,11 @@ func downloadScreenshotsForPDF(ctx context.Context, session *model.Session, app 
 
 	for err := range errCh {
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
-	return tmpFiles, fileInfos, nil
+	return tmpFiles, nil
 }
 
 func downloadAndResize(ctx context.Context, client storage.FileServiceClient, domainID int64, f *storage.File) (string, error) {

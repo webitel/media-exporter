@@ -35,6 +35,11 @@ func (app *App) HandlePdfTask(ctx context.Context, session *model.Session, task 
 		return fmt.Errorf("channel missing for task %s: %w", task.TaskID, err)
 	}
 
+	sort := task.Sort
+	if sort == "" {
+		sort = domain.DefaultScreenshotSort
+	}
+
 	var filesResp *storage.ListFile
 
 	if task.AgentID != 0 {
@@ -44,6 +49,7 @@ func (app *App) HandlePdfTask(ctx context.Context, session *model.Session, task 
 			Channel: channel,
 			AgentId: task.AgentID,
 			Size:    1000,
+			Sort:    sort,
 			UploadedAt: &engine.FilterBetween{
 				From: task.From,
 				To:   task.To,
@@ -55,6 +61,7 @@ func (app *App) HandlePdfTask(ctx context.Context, session *model.Session, task 
 			Type:    storage.ScreenrecordingType_SCREENSHOT,
 			Channel: channel,
 			Size:    1000,
+			Sort:    sort,
 			UploadedAt: &engine.FilterBetween{
 				From: task.From,
 				To:   task.To,
@@ -71,7 +78,7 @@ func (app *App) HandlePdfTask(ctx context.Context, session *model.Session, task 
 		return fmt.Errorf("failed to find files: %w", err)
 	}
 
-	tmpFiles, fileInfos, err := downloadScreenshotsForPDF(ctx, session, app, filesResp.Items)
+	tmpFiles, err := downloadScreenshotsForPDF(ctx, session, app, filesResp.Items)
 	if err != nil {
 		slog.ErrorContext(ctx, "downloadScreenshotsForPDF failed", "taskID", task.TaskID, "error", err)
 		_ = SetTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)
@@ -79,7 +86,7 @@ func (app *App) HandlePdfTask(ctx context.Context, session *model.Session, task 
 	}
 	defer util.CleanupFiles(tmpFiles)
 
-	pdfBytes, err := maroto.GeneratePDF(tmpFiles, fileInfos)
+	pdfBytes, err := maroto.GeneratePDF(filesResp.Items, tmpFiles)
 	if err != nil {
 		slog.ErrorContext(ctx, "GeneratePDF failed", "taskID", task.TaskID, "error", err)
 		_ = SetTaskStatus(app, historyID, task.TaskID, "failed", session.UserID(), nil)

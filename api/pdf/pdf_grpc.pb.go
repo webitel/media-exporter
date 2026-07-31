@@ -46,7 +46,7 @@ type PdfServiceClient interface {
 	ListCallExports(ctx context.Context, in *ListCallHistoryRequest, opts ...grpc.CallOption) (*ListExportsResponse, error)
 	// Streams a ZIP archive bundling the given, already-uploaded call files (e.g. PDFs).
 	// Synchronous: the archive is assembled on the fly and streamed back chunk by chunk,
-	// so the caller does not need to poll for completion or a separate download step.
+	// so the caller does not need to poll for completion.
 	DownloadCallArchive(ctx context.Context, in *DownloadCallArchiveRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DownloadCallArchiveResponse], error)
 	// Deletes a specific export record from the history.
 	DeleteExport(ctx context.Context, in *DeleteExportRequest, opts ...grpc.CallOption) (*DeleteExportResponse, error)
@@ -148,7 +148,7 @@ type PdfServiceServer interface {
 	ListCallExports(context.Context, *ListCallHistoryRequest) (*ListExportsResponse, error)
 	// Streams a ZIP archive bundling the given, already-uploaded call files (e.g. PDFs).
 	// Synchronous: the archive is assembled on the fly and streamed back chunk by chunk,
-	// so the caller does not need to poll for completion or a separate download step.
+	// so the caller does not need to poll for completion.
 	DownloadCallArchive(*DownloadCallArchiveRequest, grpc.ServerStreamingServer[DownloadCallArchiveResponse]) error
 	// Deletes a specific export record from the history.
 	DeleteExport(context.Context, *DeleteExportRequest) (*DeleteExportResponse, error)
