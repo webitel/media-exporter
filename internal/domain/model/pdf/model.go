@@ -37,6 +37,7 @@ type GenerateExportRequest struct {
 	FileIDs []int64
 	From    int64
 	To      int64
+	Sort    string
 }
 
 // GenerateCallExportRequest used for Calls
@@ -88,6 +89,7 @@ type ExportTask struct {
 	Headers  map[string]string `json:"headers"`
 	IDs      []int64           `json:"ids"`
 	Type     string            `json:"type"`
+	Sort     string            `json:"sort,omitempty"`
 }
 
 type PdfExportMetadata struct {

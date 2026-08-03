@@ -56,8 +56,14 @@ func (s *PdfServiceImpl) GenerateExport(ctx context.Context, opts *options.Creat
 	if req.AgentID == 0 {
 		return nil, errors.BadRequest("agent_id is required")
 	}
+
+	sort, err := domain.NormalizeScreenshotSort(req.Sort)
+	if err != nil {
+		return nil, errors.BadRequest(err.Error())
+	}
+
 	// Logic moved to a helper to reuse code between Call and Screenrecording
-	return s.createExportTask(ctx, opts, domain.ChannelScreenRecording, req.AgentID, "", req.FileIDs, req.From, req.To)
+	return s.createExportTask(ctx, opts, domain.ChannelScreenRecording, req.AgentID, "", req.FileIDs, req.From, req.To, sort)
 }
 
 func (s *PdfServiceImpl) GetHistory(ctx context.Context, req *domain.PdfHistoryRequestOptions) (*domain.HistoryResponse, error) {
@@ -75,7 +81,7 @@ func (s *PdfServiceImpl) GenerateCallExport(ctx context.Context, opts *options.C
 		return nil, errors.BadRequest("call_id is required")
 	}
 
-	return s.createExportTask(ctx, opts, domain.ChannelCall, 0, req.CallID, req.FileIDs, req.From, req.To)
+	return s.createExportTask(ctx, opts, domain.ChannelCall, 0, req.CallID, req.FileIDs, req.From, req.To, "")
 }
 
 func (s *PdfServiceImpl) GetCallHistory(ctx context.Context, req *domain.CallHistoryRequestOptions) (*domain.HistoryResponse, error) {
@@ -192,6 +198,7 @@ func (s *PdfServiceImpl) createExportTask(
 	callID string,
 	fileIDs []int64,
 	from, to int64,
+	sort string,
 ) (*domain.PdfExportMetadata, error) {
 	now := time.Now()
 
@@ -253,6 +260,7 @@ func (s *PdfServiceImpl) createExportTask(
 		Headers:  domain.ExtractHeadersFromContext(ctx, []string{"authorization", "x-req-id", "x-webitel-access"}),
 		IDs:      fileIDs,
 		Type:     domain.PdfExportType,
+		Sort:     sort,
 	}
 
 	if err := s.cache.PushExportTask(task); err != nil {

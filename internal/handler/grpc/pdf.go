@@ -46,6 +46,7 @@ func (h *PdfHandler) CreateScreenrecordingExport(ctx context.Context, req *pdfap
 		FileIDs: req.FileIds,
 		From:    req.From,
 		To:      req.To,
+		Sort:    req.Sort,
 	})
 	if err != nil {
 		return nil, err
