@@ -24,7 +24,7 @@ func downloadScreenshotsForPDF(ctx context.Context, session *model.Session, app 
 		wg.Add(1)
 		go func(f *storage.File) {
 			defer wg.Done()
-			tmpPath, err := downloadAndResize(ctx, app.StorageClient, session.DomainID(), f)
+			tmpPath, err := downloadAndResize(ctx, app.StorageClient, session.DomainID(), f, app.Config.Export.ScreenshotMaxWidth)
 			if err != nil {
 				// FIXME commented as we receive IDs from SearchScreenRecordings which do not exist / or have been deleted
 				//errCh <- err
@@ -49,7 +49,7 @@ func downloadScreenshotsForPDF(ctx context.Context, session *model.Session, app 
 	return tmpFiles, nil
 }
 
-func downloadAndResize(ctx context.Context, client storage.FileServiceClient, domainID int64, f *storage.File) (string, error) {
+func downloadAndResize(ctx context.Context, client storage.FileServiceClient, domainID int64, f *storage.File, maxWidth int) (string, error) {
 	if f.Id == 0 || f.Name == "" {
 		return "", fmt.Errorf("invalid file: id=%d, name=%q", f.Id, f.Name)
 	}
@@ -61,7 +61,7 @@ func downloadAndResize(ctx context.Context, client storage.FileServiceClient, do
 	if err := downloadToFile(ctx, client, domainID, f.Id, tmpPath); err != nil {
 		return "", err
 	}
-	_ = util.ResizeImage(tmpPath, 400)
+	_ = util.ResizeImage(tmpPath, maxWidth)
 	return tmpPath, nil
 }
 
