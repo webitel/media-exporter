@@ -24,12 +24,15 @@ func CleanupFiles(files map[string]string) {
 	}
 }
 
-func ResizeImage(path string, width int) error {
+func ResizeImage(path string, maxWidth int) error {
 	img, err := imaging.Open(path)
 	if err != nil {
 		return err
 	}
-	resized := imaging.Resize(img, width, 0, imaging.Lanczos)
+	if img.Bounds().Dx() <= maxWidth {
+		return nil
+	}
+	resized := imaging.Resize(img, maxWidth, 0, imaging.Lanczos)
 	return imaging.Save(resized, path)
 }
 
