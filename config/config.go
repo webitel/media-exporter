@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+
 	"github.com/webitel/media-exporter/internal/errors"
 )
 
@@ -36,7 +37,8 @@ type DatabaseConfig struct {
 }
 
 type ExportConfig struct {
-	Workers int `json:"workers"`
+	Workers            int `json:"workers"`
+	ScreenshotMaxWidth int `json:"screenshotMaxWidth,omitempty"`
 }
 
 func LoadConfig() (*AppConfig, error) {
@@ -76,6 +78,7 @@ func bindFlagsAndEnv() {
 	pflag.Int("redis_db", 0, "Redis DB number")
 	// export
 	pflag.Int("workers", 5, "Number of concurrent export workers")
+	pflag.Int("screenshot_max_width", 400, "Maximum width (px) to which screenshots are downscaled before being placed in the PDF")
 
 	pflag.Parse()
 
@@ -90,6 +93,7 @@ func bindFlagsAndEnv() {
 	_ = viper.BindEnv("redis_addr", "REDIS_ADDR")
 	_ = viper.BindEnv("redis_password", "REDIS_PASSWORD")
 	_ = viper.BindEnv("redis_db", "REDIS_DB")
+	_ = viper.BindEnv("screenshot_max_width", "SCREENSHOT_MAX_WIDTH")
 }
 
 func getConfigFilePath() string {
@@ -119,7 +123,10 @@ func buildAppConfig(file string) *AppConfig {
 		File:     file,
 		TempDir:  tempDir,
 		Database: &DatabaseConfig{Url: viper.GetString("data_source")},
-		Export:   &ExportConfig{Workers: viper.GetInt("workers")},
+		Export: &ExportConfig{
+			Workers:            viper.GetInt("workers"),
+			ScreenshotMaxWidth: viper.GetInt("screenshot_max_width"),
+		},
 		Consul: &ConsulConfig{
 			Id:            viper.GetString("id"),
 			Address:       viper.GetString("consul"),
