@@ -200,17 +200,19 @@ func screenrecordingArchiveEntryName(file *storage.File) string {
 
 	// Remove directory components to prevent paths inside the archive.
 	name = path.Base(strings.ReplaceAll(name, "\\", "/"))
+	name = strings.ReplaceAll(name, ":", "-")
 	if name == "" || name == "." || name == "/" || name == ".." {
 		name = "screenrecording"
 	}
 
-	if ext := path.Ext(name); ext == "" || ext == "." {
-		mimeType := strings.TrimSpace(
-			strings.SplitN(file.GetMimeType(), ";", 2)[0],
-		)
-		name += util.GetFileExt(mimeType)
-	}
+	mimeType := strings.TrimSpace(
+		strings.SplitN(file.GetMimeType(), ";", 2)[0],
+	)
+	expectedExt := util.GetFileExt(mimeType)
 
+	if expectedExt != "" && !strings.EqualFold(path.Ext(name), expectedExt) {
+		name += expectedExt
+	}
 	return fmt.Sprintf("%d_%s", file.GetId(), name)
 }
 
