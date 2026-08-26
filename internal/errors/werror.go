@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // один тип загальний з полями ід, мессадж, статус, інфо
@@ -72,19 +73,22 @@ func ID(err error) string {
 }
 
 // Code converts an error to gRPC status code.
-// All errors map to Internal, unless the error has code attached.
+// All errors map to Internal, unless the error has an attached or gRPC status code.
 // If err is nil, returns OK.
 func Code(err error) codes.Code {
 	if err == nil {
 		return codes.OK
 	}
 
-	code, _ := Value(err, ErrKeyCode).(codes.Code)
-	if code == 0 {
-		return codes.Internal
+	if code, ok := Value(err, ErrKeyCode).(codes.Code); ok && code != codes.OK {
+		return code
 	}
 
-	return code
+	if code := status.Code(err); code != codes.Unknown {
+		return code
+	}
+
+	return codes.Internal
 }
 
 // Cause returns the cause of the argument.
