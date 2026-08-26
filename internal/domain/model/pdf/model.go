@@ -55,6 +55,15 @@ type DownloadCallArchiveRequest struct {
 	FileIDs []int64
 }
 
+// DownloadScreenrecordingArchiveRequest describes the agent's original screen
+// recordings that should be included in a streamed ZIP archive.
+type DownloadScreenrecordingArchiveRequest struct {
+	AgentID int64
+	FileIDs []int64
+	From    int64
+	To      int64
+}
+
 // ArchiveMetadata describes the archive before its bytes start streaming.
 type ArchiveMetadata struct {
 	Name     string
