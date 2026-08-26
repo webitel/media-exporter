@@ -244,6 +244,57 @@ func (w *screenrecordingArchiveChunkWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+// --- Call Screenrecording Archive (ZIP) Exports ---
+
+func (h *PdfHandler) DownloadCallScreenrecordingArchive(req *pdfapi.DownloadCallScreenrecordingArchiveRequest, stream pdfapi.PdfService_DownloadCallScreenrecordingArchiveServer) error {
+	if req.GetCallId() == "" {
+		return status.Error(codes.InvalidArgument, "call_id is required")
+	}
+
+	ctx := stream.Context()
+
+	opts, err := options.NewCreateOptions(ctx)
+	if err != nil {
+		return err
+	}
+
+	archiveRequest := &domain.DownloadCallScreenrecordingArchiveRequest{
+		CallID:  req.GetCallId(),
+		FileIDs: req.GetFileIds(),
+		From:    req.GetFrom(),
+		To:      req.GetTo(),
+	}
+
+	archiveMeta, err := h.service.PrepareCallScreenrecordingArchiveMetadata(ctx, archiveRequest)
+	if err != nil {
+		return err
+	}
+
+	if err := googlegrpc.SetHeader(ctx, metadata.Pairs("filename", archiveMeta.Name, "format", "zip")); err != nil {
+		return err
+	}
+
+	w := &callScreenrecordingArchiveChunkWriter{stream: stream}
+
+	return h.service.DownloadCallScreenrecordingArchive(ctx, opts, archiveRequest, w)
+}
+
+// callScreenrecordingArchiveChunkWriter adapts the gRPC stream to the io.Writer
+// expected by the ZIP service.
+type callScreenrecordingArchiveChunkWriter struct {
+	stream pdfapi.PdfService_DownloadCallScreenrecordingArchiveServer
+}
+
+func (w *callScreenrecordingArchiveChunkWriter) Write(p []byte) (int, error) {
+	chunk := append([]byte(nil), p...)
+
+	if err := w.stream.Send(&pdfapi.DownloadCallScreenrecordingArchiveResponse{Data: chunk}); err != nil {
+		return 0, err
+	}
+
+	return len(p), nil
+}
+
 // --- General Operations ---
 
 func (h *PdfHandler) DeleteExport(ctx context.Context, req *pdfapi.DeleteExportRequest) (*pdfapi.DeleteExportResponse, error) {

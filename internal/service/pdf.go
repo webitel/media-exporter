@@ -37,6 +37,8 @@ type PdfService interface {
 	// Call archive (ZIP) methods.
 	PrepareCallArchiveMetadata(ctx context.Context, req *domain.DownloadCallArchiveRequest) (*domain.ArchiveMetadata, error)
 	DownloadCallArchive(ctx context.Context, opts *options.CreateOptions, req *domain.DownloadCallArchiveRequest, w io.Writer) error
+	PrepareCallScreenrecordingArchiveMetadata(ctx context.Context, req *domain.DownloadCallScreenrecordingArchiveRequest) (*domain.ArchiveMetadata, error)
+	DownloadCallScreenrecordingArchive(ctx context.Context, opts *options.CreateOptions, req *domain.DownloadCallScreenrecordingArchiveRequest, w io.Writer) error
 
 	// Common
 	DeleteRecord(ctx context.Context, opts *options.DeleteOptions, recordID int64) error
@@ -318,6 +320,153 @@ func (s *PdfServiceImpl) resolveArchiveFileIDs(callID string, fileIDs []int64) (
 		return nil, errors.BadRequest("no completed PDF exports found for this call")
 	}
 	return resolved, nil
+}
+
+// --- Call Screenrecording Archive (ZIP) Exports ---
+
+func (s *PdfServiceImpl) PrepareCallScreenrecordingArchiveMetadata(_ context.Context, req *domain.DownloadCallScreenrecordingArchiveRequest) (*domain.ArchiveMetadata, error) {
+	if req.CallID == "" {
+		return nil, errors.BadRequest("call_id is required")
+	}
+
+	name := fmt.Sprintf("archive_screenrecordings_call_%s_%s.zip", req.CallID, time.Now().Format("2006-01-02_15_04_05"))
+
+	return &domain.ArchiveMetadata{
+		Name:     name,
+		MimeType: "application/zip",
+	}, nil
+}
+
+// searchCallScreenrecordingArchiveFiles retrieves all matching call screen
+// recording videos from storage, following pagination until it is exhausted.
+func (s *PdfServiceImpl) searchCallScreenrecordingArchiveFiles(ctx context.Context, req *domain.DownloadCallScreenrecordingArchiveRequest) ([]*storage.File, error) {
+	if req.CallID == "" {
+		return nil, errors.BadRequest("call_id is required")
+	}
+
+	const pageSize int32 = 1000
+
+	search := &storage.SearchScreenRecordingsByCallRequest{
+		CallId:  req.CallID,
+		Size:    pageSize,
+		Sort:    "+id",
+		Type:    storage.ScreenrecordingType_SCREENSHARING,
+		Channel: storage.ScreenrecordingChannel_CALL,
+	}
+
+	// Explicitly selected files take precedence over the date filter.
+	if len(req.FileIDs) > 0 {
+		search.Id = req.FileIDs
+	} else if req.From != 0 || req.To != 0 {
+		search.UploadedAt = &engine.FilterBetween{
+			From: req.From,
+			To:   req.To,
+		}
+	}
+
+	var files []*storage.File
+
+	for page := int32(1); ; page++ {
+		search.Page = page
+
+		response, err := s.storageClient.SearchScreenRecordingsByCall(ctx, search)
+		if err != nil {
+			return nil, fmt.Errorf("SearchScreenRecordingsByCall failed: %w", err)
+		}
+
+		if response == nil || len(response.GetItems()) == 0 {
+			break
+		}
+
+		files = append(files, response.GetItems()...)
+
+		if !response.GetNext() {
+			break
+		}
+	}
+
+	if len(files) == 0 {
+		return nil, errors.BadRequest("no screen recordings found")
+	}
+
+	return files, nil
+}
+
+// DownloadCallScreenrecordingArchive streams call screen recordings directly
+// from storage into a ZIP archive without creating a temporary archive file.
+func (s *PdfServiceImpl) DownloadCallScreenrecordingArchive(ctx context.Context, opts *options.CreateOptions, req *domain.DownloadCallScreenrecordingArchiveRequest, w io.Writer) error {
+	if req.CallID == "" {
+		return errors.BadRequest("call_id is required")
+	}
+
+	ctx = util.ForwardIncomingHeaders(ctx, []string{"authorization", "x-req-id", "x-webitel-access"})
+
+	files, err := s.searchCallScreenrecordingArchiveFiles(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	domainID := opts.Auth.GetDomainId()
+	entries := make([]util.ZipStreamEntry, 0, len(files))
+	usedNames := make(map[string]struct{}, len(files))
+
+	for _, file := range files {
+		fileID := file.GetId()
+		name := uniqueArchiveEntryName(callScreenrecordingArchiveEntryName(file), usedNames)
+
+		entries = append(entries, util.ZipStreamEntry{
+			Name: name,
+			Open: func() (io.ReadCloser, error) {
+				return util.NewStorageFileReader(ctx, s.storageClient, domainID, fileID)
+			},
+		})
+	}
+
+	if err := util.StreamZipArchive(w, entries); err != nil {
+		return fmt.Errorf("stream call screen recording ZIP archive: %w", err)
+	}
+
+	return nil
+}
+
+// callScreenrecordingArchiveEntryName builds a safe ZIP entry name.
+func callScreenrecordingArchiveEntryName(file *storage.File) string {
+	name := file.GetViewName()
+	if name == "" {
+		name = file.GetName()
+	}
+
+	name = path.Base(strings.ReplaceAll(name, "\\", "/"))
+	name = strings.ReplaceAll(name, ":", "-")
+	if name == "" || name == "." || name == "/" || name == ".." {
+		name = "screenrecording"
+	}
+
+	mimeType := strings.TrimSpace(strings.SplitN(file.GetMimeType(), ";", 2)[0])
+	expectedExt := util.GetFileExt(mimeType)
+	if expectedExt != "" && !strings.EqualFold(path.Ext(name), expectedExt) {
+		name += expectedExt
+	}
+
+	return name
+}
+
+func uniqueArchiveEntryName(name string, used map[string]struct{}) string {
+	if _, exists := used[name]; !exists {
+		used[name] = struct{}{}
+		return name
+	}
+
+	ext := path.Ext(name)
+	base := strings.TrimSuffix(name, ext)
+
+	for number := 2; ; number++ {
+		candidate := fmt.Sprintf("%s (%d)%s", base, number, ext)
+		if _, exists := used[candidate]; !exists {
+			used[candidate] = struct{}{}
+			return candidate
+		}
+	}
 }
 
 // --- General ---

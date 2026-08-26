@@ -98,6 +98,17 @@ var WebitelAPI = WebitelServicesInfo{
 					},
 				},
 			},
+			"DownloadCallScreenrecordingArchive": WebitelMethod{
+				Access: 0,
+				Input:  "DownloadCallScreenrecordingArchiveRequest",
+				Output: "DownloadCallScreenrecordingArchiveResponse",
+				HttpBindings: []*HttpBinding{
+					{
+						Path:   "/calls/{call_id}/exports/archive/screenrecordings",
+						Method: "GET",
+					},
+				},
+			},
 			"DeleteExport": WebitelMethod{
 				Access: 0,
 				Input:  "DeleteExportRequest",
