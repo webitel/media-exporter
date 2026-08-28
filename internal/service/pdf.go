@@ -29,6 +29,8 @@ type PdfService interface {
 	// Screenrecording archive (ZIP) methods.
 	PrepareScreenrecordingArchiveMetadata(ctx context.Context, req *domain.DownloadScreenrecordingArchiveRequest) (*domain.ArchiveMetadata, error)
 	DownloadScreenrecordingArchive(ctx context.Context, opts *options.CreateOptions, req *domain.DownloadScreenrecordingArchiveRequest, w io.Writer) error
+	PrepareScreenshotArchiveMetadata(ctx context.Context, req *domain.DownloadScreenshotArchiveRequest) (*domain.ArchiveMetadata, error)
+	DownloadScreenshotArchive(ctx context.Context, opts *options.CreateOptions, req *domain.DownloadScreenshotArchiveRequest, w io.Writer) error
 
 	// Call methods
 	GenerateCallExport(ctx context.Context, opts *options.CreateOptions, req *domain.GenerateCallExportRequest) (*domain.PdfExportMetadata, error)
@@ -197,6 +199,12 @@ func (s *PdfServiceImpl) DownloadScreenrecordingArchive(ctx context.Context, opt
 
 // screenrecordingArchiveEntryName builds a safe ZIP entry name.
 func screenrecordingArchiveEntryName(file *storage.File) string {
+	return archiveEntryName(file, "screenrecording")
+}
+
+// archiveEntryName builds a safe ZIP entry name and restores the extension
+// from the file MIME type when storage metadata does not include it.
+func archiveEntryName(file *storage.File, fallback string) string {
 	name := file.GetViewName()
 	if name == "" {
 		name = file.GetName()
@@ -206,7 +214,7 @@ func screenrecordingArchiveEntryName(file *storage.File) string {
 	name = path.Base(strings.ReplaceAll(name, "\\", "/"))
 	name = strings.ReplaceAll(name, ":", "-")
 	if name == "" || name == "." || name == "/" || name == ".." {
-		name = "screenrecording"
+		name = fallback
 	}
 
 	mimeType := strings.TrimSpace(
@@ -218,6 +226,113 @@ func screenrecordingArchiveEntryName(file *storage.File) string {
 		name += expectedExt
 	}
 	return name
+}
+
+// --- Screenshot Archive (ZIP) Exports ---
+
+func (s *PdfServiceImpl) PrepareScreenshotArchiveMetadata(_ context.Context, req *domain.DownloadScreenshotArchiveRequest) (*domain.ArchiveMetadata, error) {
+	if req.AgentID == 0 {
+		return nil, errors.BadRequest("agent_id is required")
+	}
+
+	name := fmt.Sprintf("archive_screenshots_agent_%d_%s.zip", req.AgentID, time.Now().Format("2006-01-02_15_04_05"))
+
+	return &domain.ArchiveMetadata{
+		Name:     name,
+		MimeType: "application/zip",
+	}, nil
+}
+
+// searchScreenshotArchiveFiles retrieves all matching screenshots from
+// storage, following pagination until the result set is exhausted.
+func (s *PdfServiceImpl) searchScreenshotArchiveFiles(ctx context.Context, req *domain.DownloadScreenshotArchiveRequest) ([]*storage.File, error) {
+	if req.AgentID == 0 {
+		return nil, errors.BadRequest("agent_id is required")
+	}
+
+	const pageSize int32 = 1000
+
+	search := &storage.SearchScreenRecordingsByAgentRequest{
+		AgentId: req.AgentID,
+		Size:    pageSize,
+		Sort:    "+id",
+		Type:    storage.ScreenrecordingType_SCREENSHOT,
+		Channel: storage.ScreenrecordingChannel_SCREENRECORDING,
+	}
+
+	// Explicitly selected files take precedence over the current date filter.
+	if len(req.FileIDs) > 0 {
+		search.Id = req.FileIDs
+	} else if req.From != 0 || req.To != 0 {
+		search.UploadedAt = &engine.FilterBetween{
+			From: req.From,
+			To:   req.To,
+		}
+	}
+
+	var files []*storage.File
+
+	for page := int32(1); ; page++ {
+		search.Page = page
+
+		response, err := s.storageClient.SearchScreenRecordingsByAgent(ctx, search)
+		if err != nil {
+			return nil, fmt.Errorf("SearchScreenRecordingsByAgent failed: %w", err)
+		}
+
+		if response == nil || len(response.GetItems()) == 0 {
+			break
+		}
+
+		files = append(files, response.GetItems()...)
+
+		if !response.GetNext() {
+			break
+		}
+	}
+
+	if len(files) == 0 {
+		return nil, errors.NotFound("no screenshots found")
+	}
+
+	return files, nil
+}
+
+// DownloadScreenshotArchive streams the selected screenshots from storage
+// directly into a ZIP archive.
+func (s *PdfServiceImpl) DownloadScreenshotArchive(ctx context.Context, opts *options.CreateOptions, req *domain.DownloadScreenshotArchiveRequest, w io.Writer) error {
+	if req.AgentID == 0 {
+		return errors.BadRequest("agent_id is required")
+	}
+
+	ctx = util.ForwardIncomingHeaders(ctx, []string{"authorization", "x-req-id", "x-webitel-access"})
+
+	files, err := s.searchScreenshotArchiveFiles(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	domainID := opts.Auth.GetDomainId()
+	entries := make([]util.ZipStreamEntry, 0, len(files))
+	usedNames := make(map[string]struct{}, len(files))
+
+	for _, file := range files {
+		fileID := file.GetId()
+		name := uniqueArchiveEntryName(archiveEntryName(file, "screenshot"), usedNames)
+
+		entries = append(entries, util.ZipStreamEntry{
+			Name: name,
+			Open: func() (io.ReadCloser, error) {
+				return util.NewStorageFileReader(ctx, s.storageClient, domainID, fileID)
+			},
+		})
+	}
+
+	if err := util.StreamZipArchive(w, entries); err != nil {
+		return fmt.Errorf("stream screenshot ZIP archive: %w", err)
+	}
+
+	return nil
 }
 
 // --- Call Exports ---
