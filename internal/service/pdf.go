@@ -386,7 +386,7 @@ func (s *PdfServiceImpl) searchCallScreenrecordingArchiveFiles(ctx context.Conte
 	}
 
 	if len(files) == 0 {
-		return nil, errors.BadRequest("no screen recordings found")
+		return nil, errors.NotFound("no screen recordings found")
 	}
 
 	return files, nil

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 
 	"github.com/webitel/media-exporter/api/storage"
+	"github.com/webitel/media-exporter/internal/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -20,7 +21,6 @@ type ZipStreamEntry struct {
 func StreamZipArchive(w io.Writer, entries []ZipStreamEntry) error {
 	zw := zip.NewWriter(w)
 	added := 0
-	skipped := 0
 
 	for _, entry := range entries {
 		ok, err := addStreamEntry(zw, entry)
@@ -30,13 +30,12 @@ func StreamZipArchive(w io.Writer, entries []ZipStreamEntry) error {
 		}
 		if ok {
 			added++
-		} else {
-			skipped++
 		}
 	}
 
-	if added == 0 && skipped > 0 {
-		return fmt.Errorf("no available files to archive")
+	if added == 0 {
+		_ = zw.Close()
+		return errors.NotFound("no available files to archive")
 	}
 
 	return zw.Close()
