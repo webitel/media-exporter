@@ -87,6 +87,9 @@ func NewStorageFileReader(ctx context.Context, client storage.FileServiceClient,
 	reader := &storageFileReader{source: stream, cancel: cancel}
 	if err := reader.receive(); err != nil {
 		_ = reader.Close()
+		if err == io.EOF {
+			return nil, status.Errorf(codes.NotFound, "file %d has no content", fileID)
+		}
 		return nil, fmt.Errorf("read first chunk for file %d: %w", fileID, err)
 	}
 

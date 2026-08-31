@@ -169,12 +169,14 @@ func (s *PdfServiceImpl) DownloadScreenrecordingArchive(ctx context.Context, opt
 
 	domainID := opts.Auth.GetDomainId()
 	entries := make([]util.ZipStreamEntry, 0, len(files))
+	usedNames := make(map[string]struct{}, len(files))
 
 	for _, file := range files {
 		fileID := file.GetId()
+		name := uniqueArchiveEntryName(screenrecordingArchiveEntryName(file), usedNames)
 
 		entries = append(entries, util.ZipStreamEntry{
-			Name: screenrecordingArchiveEntryName(file),
+			Name: name,
 			Open: func() (io.ReadCloser, error) {
 				return util.NewStorageFileReader(
 					ctx,
@@ -193,7 +195,7 @@ func (s *PdfServiceImpl) DownloadScreenrecordingArchive(ctx context.Context, opt
 	return nil
 }
 
-// screenrecordingArchiveEntryName builds a safe and unique ZIP entry name.
+// screenrecordingArchiveEntryName builds a safe ZIP entry name.
 func screenrecordingArchiveEntryName(file *storage.File) string {
 	name := file.GetViewName()
 	if name == "" {
@@ -215,7 +217,7 @@ func screenrecordingArchiveEntryName(file *storage.File) string {
 	if expectedExt != "" && !strings.EqualFold(path.Ext(name), expectedExt) {
 		name += expectedExt
 	}
-	return fmt.Sprintf("%d_%s", file.GetId(), name)
+	return name
 }
 
 // --- Call Exports ---
@@ -412,7 +414,7 @@ func (s *PdfServiceImpl) DownloadCallScreenrecordingArchive(ctx context.Context,
 
 	for _, file := range files {
 		fileID := file.GetId()
-		name := uniqueArchiveEntryName(callScreenrecordingArchiveEntryName(file), usedNames)
+		name := uniqueArchiveEntryName(screenrecordingArchiveEntryName(file), usedNames)
 
 		entries = append(entries, util.ZipStreamEntry{
 			Name: name,
@@ -427,28 +429,6 @@ func (s *PdfServiceImpl) DownloadCallScreenrecordingArchive(ctx context.Context,
 	}
 
 	return nil
-}
-
-// callScreenrecordingArchiveEntryName builds a safe ZIP entry name.
-func callScreenrecordingArchiveEntryName(file *storage.File) string {
-	name := file.GetViewName()
-	if name == "" {
-		name = file.GetName()
-	}
-
-	name = path.Base(strings.ReplaceAll(name, "\\", "/"))
-	name = strings.ReplaceAll(name, ":", "-")
-	if name == "" || name == "." || name == "/" || name == ".." {
-		name = "screenrecording"
-	}
-
-	mimeType := strings.TrimSpace(strings.SplitN(file.GetMimeType(), ";", 2)[0])
-	expectedExt := util.GetFileExt(mimeType)
-	if expectedExt != "" && !strings.EqualFold(path.Ext(name), expectedExt) {
-		name += expectedExt
-	}
-
-	return name
 }
 
 func uniqueArchiveEntryName(name string, used map[string]struct{}) string {
