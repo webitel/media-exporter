@@ -31,6 +31,7 @@ func (m *Pdf) GetPdfExportHistory(req *domain.PdfHistoryRequestOptions) (*domain
 			sq.Expr("EXISTS (SELECT 1 FROM storage.files f WHERE f.id = h.file_id AND f.removed IS NULL)"),
 		},
 	}
+	filter = appendUploadedAtRange(filter, req.From, req.To)
 	return m.listHistory(filter, int64(req.Page), int64(req.Size), req.Sort)
 }
 
@@ -44,7 +45,20 @@ func (m *Pdf) GetCallPdfExportHistory(req *domain.CallHistoryRequestOptions) (*d
 			sq.Expr("EXISTS (SELECT 1 FROM storage.files f WHERE f.id = h.file_id AND f.removed IS NULL)"),
 		},
 	}
+	filter = appendUploadedAtRange(filter, req.From, req.To)
 	return m.listHistory(filter, int64(req.Page), int64(req.Size), req.Sort)
+}
+
+// appendUploadedAtRange adds an h.uploaded_at range predicate (Unix millis) when from/to are set.
+func appendUploadedAtRange(filter sq.And, from, to int64) sq.And {
+	if from > 0 {
+		filter = append(filter, sq.GtOrEq{"h.uploaded_at": from})
+	}
+
+	if to > 0 {
+		filter = append(filter, sq.LtOrEq{"h.uploaded_at": to})
+	}
+	return filter
 }
 
 // Internal helper for paginated history fetching

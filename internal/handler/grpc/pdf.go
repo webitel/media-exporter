@@ -71,6 +71,8 @@ func (h *PdfHandler) ListScreenrecordingExports(ctx context.Context, req *pdfapi
 		Page:    req.Page,
 		Size:    req.Size,
 		Sort:    req.Sort,
+		From:    req.GetUploadedAt().GetFrom(),
+		To:      req.GetUploadedAt().GetTo(),
 	})
 	if err != nil {
 		return nil, err
@@ -120,6 +122,8 @@ func (h *PdfHandler) ListCallExports(ctx context.Context, req *pdfapi.ListCallHi
 		Page:   req.Page,
 		Size:   req.Size,
 		Sort:   req.Sort,
+		From:   req.GetUploadedAt().GetFrom(),
+		To:     req.GetUploadedAt().GetTo(),
 	})
 	if err != nil {
 		return nil, err

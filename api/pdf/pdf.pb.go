@@ -446,7 +446,8 @@ type ListScreenrecordingHistoryRequest struct {
 	Page    int32                  `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"` // Page number (1-based).
 	Size    int32                  `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"` // Number of items per page.
 	// sorting criteria, e.g. "+created_at" or "-name"
-	Sort          string `protobuf:"bytes,4,opt,name=sort,proto3" json:"sort,omitempty"`
+	Sort          string         `protobuf:"bytes,4,opt,name=sort,proto3" json:"sort,omitempty"`
+	UploadedAt    *FilterBetween `protobuf:"bytes,5,opt,name=uploaded_at,json=uploadedAt,proto3" json:"uploaded_at,omitempty"` // Filters records by their uploaded_at (Unix millis) range.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -509,6 +510,13 @@ func (x *ListScreenrecordingHistoryRequest) GetSort() string {
 	return ""
 }
 
+func (x *ListScreenrecordingHistoryRequest) GetUploadedAt() *FilterBetween {
+	if x != nil {
+		return x.UploadedAt
+	}
+	return nil
+}
+
 // Request for retrieving paginated export history for a call.
 type ListCallHistoryRequest struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
@@ -516,7 +524,8 @@ type ListCallHistoryRequest struct {
 	Page   int32                  `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"` // Page number (1-based).
 	Size   int32                  `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"` // Number of items per page.
 	// sorting criteria, e.g. "+created_at" or "-name"
-	Sort          string `protobuf:"bytes,4,opt,name=sort,proto3" json:"sort,omitempty"`
+	Sort          string         `protobuf:"bytes,4,opt,name=sort,proto3" json:"sort,omitempty"`
+	UploadedAt    *FilterBetween `protobuf:"bytes,5,opt,name=uploaded_at,json=uploadedAt,proto3" json:"uploaded_at,omitempty"` // Filters records by their uploaded_at (Unix millis) range.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -579,6 +588,66 @@ func (x *ListCallHistoryRequest) GetSort() string {
 	return ""
 }
 
+func (x *ListCallHistoryRequest) GetUploadedAt() *FilterBetween {
+	if x != nil {
+		return x.UploadedAt
+	}
+	return nil
+}
+
+// Unix-millis inclusive range filter, e.g. for uploaded_at.from / uploaded_at.to query params.
+type FilterBetween struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	From          int64                  `protobuf:"varint,1,opt,name=from,proto3" json:"from,omitempty"`
+	To            int64                  `protobuf:"varint,2,opt,name=to,proto3" json:"to,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FilterBetween) Reset() {
+	*x = FilterBetween{}
+	mi := &file_pdf_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FilterBetween) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FilterBetween) ProtoMessage() {}
+
+func (x *FilterBetween) ProtoReflect() protoreflect.Message {
+	mi := &file_pdf_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FilterBetween.ProtoReflect.Descriptor instead.
+func (*FilterBetween) Descriptor() ([]byte, []int) {
+	return file_pdf_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *FilterBetween) GetFrom() int64 {
+	if x != nil {
+		return x.From
+	}
+	return 0
+}
+
+func (x *FilterBetween) GetTo() int64 {
+	if x != nil {
+		return x.To
+	}
+	return 0
+}
+
 // Response containing a page of export history records.
 type ListExportsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -591,7 +660,7 @@ type ListExportsResponse struct {
 
 func (x *ListExportsResponse) Reset() {
 	*x = ListExportsResponse{}
-	mi := &file_pdf_proto_msgTypes[8]
+	mi := &file_pdf_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -603,7 +672,7 @@ func (x *ListExportsResponse) String() string {
 func (*ListExportsResponse) ProtoMessage() {}
 
 func (x *ListExportsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[8]
+	mi := &file_pdf_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -616,7 +685,7 @@ func (x *ListExportsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListExportsResponse.ProtoReflect.Descriptor instead.
 func (*ListExportsResponse) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{8}
+	return file_pdf_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListExportsResponse) GetPage() int32 {
@@ -654,7 +723,7 @@ type ExportTask struct {
 
 func (x *ExportTask) Reset() {
 	*x = ExportTask{}
-	mi := &file_pdf_proto_msgTypes[9]
+	mi := &file_pdf_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -666,7 +735,7 @@ func (x *ExportTask) String() string {
 func (*ExportTask) ProtoMessage() {}
 
 func (x *ExportTask) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[9]
+	mi := &file_pdf_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -679,7 +748,7 @@ func (x *ExportTask) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportTask.ProtoReflect.Descriptor instead.
 func (*ExportTask) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{9}
+	return file_pdf_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ExportTask) GetTaskId() string {
@@ -735,7 +804,7 @@ type ExportRecord struct {
 
 func (x *ExportRecord) Reset() {
 	*x = ExportRecord{}
-	mi := &file_pdf_proto_msgTypes[10]
+	mi := &file_pdf_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -747,7 +816,7 @@ func (x *ExportRecord) String() string {
 func (*ExportRecord) ProtoMessage() {}
 
 func (x *ExportRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[10]
+	mi := &file_pdf_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -760,7 +829,7 @@ func (x *ExportRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportRecord.ProtoReflect.Descriptor instead.
 func (*ExportRecord) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{10}
+	return file_pdf_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ExportRecord) GetId() int64 {
@@ -836,7 +905,7 @@ type DeleteExportRequest struct {
 
 func (x *DeleteExportRequest) Reset() {
 	*x = DeleteExportRequest{}
-	mi := &file_pdf_proto_msgTypes[11]
+	mi := &file_pdf_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -848,7 +917,7 @@ func (x *DeleteExportRequest) String() string {
 func (*DeleteExportRequest) ProtoMessage() {}
 
 func (x *DeleteExportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[11]
+	mi := &file_pdf_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -861,7 +930,7 @@ func (x *DeleteExportRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteExportRequest.ProtoReflect.Descriptor instead.
 func (*DeleteExportRequest) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{11}
+	return file_pdf_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *DeleteExportRequest) GetId() int64 {
@@ -881,7 +950,7 @@ type DeleteExportResponse struct {
 
 func (x *DeleteExportResponse) Reset() {
 	*x = DeleteExportResponse{}
-	mi := &file_pdf_proto_msgTypes[12]
+	mi := &file_pdf_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -893,7 +962,7 @@ func (x *DeleteExportResponse) String() string {
 func (*DeleteExportResponse) ProtoMessage() {}
 
 func (x *DeleteExportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[12]
+	mi := &file_pdf_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -906,7 +975,7 @@ func (x *DeleteExportResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteExportResponse.ProtoReflect.Descriptor instead.
 func (*DeleteExportResponse) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{12}
+	return file_pdf_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *DeleteExportResponse) GetId() int64 {
@@ -929,7 +998,7 @@ type DownloadScreenrecordingArchiveRequest struct {
 
 func (x *DownloadScreenrecordingArchiveRequest) Reset() {
 	*x = DownloadScreenrecordingArchiveRequest{}
-	mi := &file_pdf_proto_msgTypes[13]
+	mi := &file_pdf_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -941,7 +1010,7 @@ func (x *DownloadScreenrecordingArchiveRequest) String() string {
 func (*DownloadScreenrecordingArchiveRequest) ProtoMessage() {}
 
 func (x *DownloadScreenrecordingArchiveRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[13]
+	mi := &file_pdf_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -954,7 +1023,7 @@ func (x *DownloadScreenrecordingArchiveRequest) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use DownloadScreenrecordingArchiveRequest.ProtoReflect.Descriptor instead.
 func (*DownloadScreenrecordingArchiveRequest) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{13}
+	return file_pdf_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DownloadScreenrecordingArchiveRequest) GetAgentId() int64 {
@@ -996,7 +1065,7 @@ type DownloadScreenrecordingArchiveResponse struct {
 
 func (x *DownloadScreenrecordingArchiveResponse) Reset() {
 	*x = DownloadScreenrecordingArchiveResponse{}
-	mi := &file_pdf_proto_msgTypes[14]
+	mi := &file_pdf_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1008,7 +1077,7 @@ func (x *DownloadScreenrecordingArchiveResponse) String() string {
 func (*DownloadScreenrecordingArchiveResponse) ProtoMessage() {}
 
 func (x *DownloadScreenrecordingArchiveResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pdf_proto_msgTypes[14]
+	mi := &file_pdf_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1021,7 +1090,7 @@ func (x *DownloadScreenrecordingArchiveResponse) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use DownloadScreenrecordingArchiveResponse.ProtoReflect.Descriptor instead.
 func (*DownloadScreenrecordingArchiveResponse) Descriptor() ([]byte, []int) {
-	return file_pdf_proto_rawDescGZIP(), []int{14}
+	return file_pdf_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *DownloadScreenrecordingArchiveResponse) GetData() []byte {
@@ -1058,17 +1127,24 @@ const file_pdf_proto_rawDesc = "" +
 	"\x04from\x18\x03 \x01(\x03R\x04from\x12\x0e\n" +
 	"\x02to\x18\x04 \x01(\x03R\x02to\"@\n" +
 	"*DownloadCallScreenrecordingArchiveResponse\x12\x12\n" +
-	"\x04data\x18\x01 \x01(\fR\x04data\"z\n" +
+	"\x04data\x18\x01 \x01(\fR\x04data\"\xc2\x01\n" +
 	"!ListScreenrecordingHistoryRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\x03R\aagentId\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x12\n" +
 	"\x04size\x18\x03 \x01(\x05R\x04size\x12\x12\n" +
-	"\x04sort\x18\x04 \x01(\tR\x04sort\"m\n" +
+	"\x04sort\x18\x04 \x01(\tR\x04sort\x12F\n" +
+	"\vuploaded_at\x18\x05 \x01(\v2%.webitel_media_exporter.FilterBetweenR\n" +
+	"uploadedAt\"\xb5\x01\n" +
 	"\x16ListCallHistoryRequest\x12\x17\n" +
 	"\acall_id\x18\x01 \x01(\tR\x06callId\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x12\n" +
 	"\x04size\x18\x03 \x01(\x05R\x04size\x12\x12\n" +
-	"\x04sort\x18\x04 \x01(\tR\x04sort\"y\n" +
+	"\x04sort\x18\x04 \x01(\tR\x04sort\x12F\n" +
+	"\vuploaded_at\x18\x05 \x01(\v2%.webitel_media_exporter.FilterBetweenR\n" +
+	"uploadedAt\"3\n" +
+	"\rFilterBetween\x12\x12\n" +
+	"\x04from\x18\x01 \x01(\x03R\x04from\x12\x0e\n" +
+	"\x02to\x18\x02 \x01(\x03R\x02to\"y\n" +
 	"\x13ListExportsResponse\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x12\n" +
 	"\x04next\x18\x02 \x01(\bR\x04next\x12:\n" +
@@ -1138,7 +1214,7 @@ func file_pdf_proto_rawDescGZIP() []byte {
 }
 
 var file_pdf_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_pdf_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_pdf_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_pdf_proto_goTypes = []any{
 	(ExportStatus)(0),                                  // 0: webitel_media_exporter.ExportStatus
 	(*CreateScreenrecordingRequest)(nil),               // 1: webitel_media_exporter.CreateScreenrecordingRequest
@@ -1149,39 +1225,42 @@ var file_pdf_proto_goTypes = []any{
 	(*DownloadCallScreenrecordingArchiveResponse)(nil), // 6: webitel_media_exporter.DownloadCallScreenrecordingArchiveResponse
 	(*ListScreenrecordingHistoryRequest)(nil),          // 7: webitel_media_exporter.ListScreenrecordingHistoryRequest
 	(*ListCallHistoryRequest)(nil),                     // 8: webitel_media_exporter.ListCallHistoryRequest
-	(*ListExportsResponse)(nil),                        // 9: webitel_media_exporter.ListExportsResponse
-	(*ExportTask)(nil),                                 // 10: webitel_media_exporter.ExportTask
-	(*ExportRecord)(nil),                               // 11: webitel_media_exporter.ExportRecord
-	(*DeleteExportRequest)(nil),                        // 12: webitel_media_exporter.DeleteExportRequest
-	(*DeleteExportResponse)(nil),                       // 13: webitel_media_exporter.DeleteExportResponse
-	(*DownloadScreenrecordingArchiveRequest)(nil),      // 14: webitel_media_exporter.DownloadScreenrecordingArchiveRequest
-	(*DownloadScreenrecordingArchiveResponse)(nil),     // 15: webitel_media_exporter.DownloadScreenrecordingArchiveResponse
+	(*FilterBetween)(nil),                              // 9: webitel_media_exporter.FilterBetween
+	(*ListExportsResponse)(nil),                        // 10: webitel_media_exporter.ListExportsResponse
+	(*ExportTask)(nil),                                 // 11: webitel_media_exporter.ExportTask
+	(*ExportRecord)(nil),                               // 12: webitel_media_exporter.ExportRecord
+	(*DeleteExportRequest)(nil),                        // 13: webitel_media_exporter.DeleteExportRequest
+	(*DeleteExportResponse)(nil),                       // 14: webitel_media_exporter.DeleteExportResponse
+	(*DownloadScreenrecordingArchiveRequest)(nil),      // 15: webitel_media_exporter.DownloadScreenrecordingArchiveRequest
+	(*DownloadScreenrecordingArchiveResponse)(nil),     // 16: webitel_media_exporter.DownloadScreenrecordingArchiveResponse
 }
 var file_pdf_proto_depIdxs = []int32{
-	11, // 0: webitel_media_exporter.ListExportsResponse.items:type_name -> webitel_media_exporter.ExportRecord
-	0,  // 1: webitel_media_exporter.ExportTask.status:type_name -> webitel_media_exporter.ExportStatus
-	0,  // 2: webitel_media_exporter.ExportRecord.status:type_name -> webitel_media_exporter.ExportStatus
-	1,  // 3: webitel_media_exporter.PdfService.CreateScreenrecordingExport:input_type -> webitel_media_exporter.CreateScreenrecordingRequest
-	7,  // 4: webitel_media_exporter.PdfService.ListScreenrecordingExports:input_type -> webitel_media_exporter.ListScreenrecordingHistoryRequest
-	2,  // 5: webitel_media_exporter.PdfService.CreateCallExport:input_type -> webitel_media_exporter.CreateCallExportRequest
-	8,  // 6: webitel_media_exporter.PdfService.ListCallExports:input_type -> webitel_media_exporter.ListCallHistoryRequest
-	3,  // 7: webitel_media_exporter.PdfService.DownloadCallArchive:input_type -> webitel_media_exporter.DownloadCallArchiveRequest
-	14, // 8: webitel_media_exporter.PdfService.DownloadScreenrecordingArchive:input_type -> webitel_media_exporter.DownloadScreenrecordingArchiveRequest
-	5,  // 9: webitel_media_exporter.PdfService.DownloadCallScreenrecordingArchive:input_type -> webitel_media_exporter.DownloadCallScreenrecordingArchiveRequest
-	12, // 10: webitel_media_exporter.PdfService.DeleteExport:input_type -> webitel_media_exporter.DeleteExportRequest
-	10, // 11: webitel_media_exporter.PdfService.CreateScreenrecordingExport:output_type -> webitel_media_exporter.ExportTask
-	9,  // 12: webitel_media_exporter.PdfService.ListScreenrecordingExports:output_type -> webitel_media_exporter.ListExportsResponse
-	10, // 13: webitel_media_exporter.PdfService.CreateCallExport:output_type -> webitel_media_exporter.ExportTask
-	9,  // 14: webitel_media_exporter.PdfService.ListCallExports:output_type -> webitel_media_exporter.ListExportsResponse
-	4,  // 15: webitel_media_exporter.PdfService.DownloadCallArchive:output_type -> webitel_media_exporter.DownloadCallArchiveResponse
-	15, // 16: webitel_media_exporter.PdfService.DownloadScreenrecordingArchive:output_type -> webitel_media_exporter.DownloadScreenrecordingArchiveResponse
-	6,  // 17: webitel_media_exporter.PdfService.DownloadCallScreenrecordingArchive:output_type -> webitel_media_exporter.DownloadCallScreenrecordingArchiveResponse
-	13, // 18: webitel_media_exporter.PdfService.DeleteExport:output_type -> webitel_media_exporter.DeleteExportResponse
-	11, // [11:19] is the sub-list for method output_type
-	3,  // [3:11] is the sub-list for method input_type
-	3,  // [3:3] is the sub-list for extension type_name
-	3,  // [3:3] is the sub-list for extension extendee
-	0,  // [0:3] is the sub-list for field type_name
+	9,  // 0: webitel_media_exporter.ListScreenrecordingHistoryRequest.uploaded_at:type_name -> webitel_media_exporter.FilterBetween
+	9,  // 1: webitel_media_exporter.ListCallHistoryRequest.uploaded_at:type_name -> webitel_media_exporter.FilterBetween
+	12, // 2: webitel_media_exporter.ListExportsResponse.items:type_name -> webitel_media_exporter.ExportRecord
+	0,  // 3: webitel_media_exporter.ExportTask.status:type_name -> webitel_media_exporter.ExportStatus
+	0,  // 4: webitel_media_exporter.ExportRecord.status:type_name -> webitel_media_exporter.ExportStatus
+	1,  // 5: webitel_media_exporter.PdfService.CreateScreenrecordingExport:input_type -> webitel_media_exporter.CreateScreenrecordingRequest
+	7,  // 6: webitel_media_exporter.PdfService.ListScreenrecordingExports:input_type -> webitel_media_exporter.ListScreenrecordingHistoryRequest
+	2,  // 7: webitel_media_exporter.PdfService.CreateCallExport:input_type -> webitel_media_exporter.CreateCallExportRequest
+	8,  // 8: webitel_media_exporter.PdfService.ListCallExports:input_type -> webitel_media_exporter.ListCallHistoryRequest
+	3,  // 9: webitel_media_exporter.PdfService.DownloadCallArchive:input_type -> webitel_media_exporter.DownloadCallArchiveRequest
+	15, // 10: webitel_media_exporter.PdfService.DownloadScreenrecordingArchive:input_type -> webitel_media_exporter.DownloadScreenrecordingArchiveRequest
+	5,  // 11: webitel_media_exporter.PdfService.DownloadCallScreenrecordingArchive:input_type -> webitel_media_exporter.DownloadCallScreenrecordingArchiveRequest
+	13, // 12: webitel_media_exporter.PdfService.DeleteExport:input_type -> webitel_media_exporter.DeleteExportRequest
+	11, // 13: webitel_media_exporter.PdfService.CreateScreenrecordingExport:output_type -> webitel_media_exporter.ExportTask
+	10, // 14: webitel_media_exporter.PdfService.ListScreenrecordingExports:output_type -> webitel_media_exporter.ListExportsResponse
+	11, // 15: webitel_media_exporter.PdfService.CreateCallExport:output_type -> webitel_media_exporter.ExportTask
+	10, // 16: webitel_media_exporter.PdfService.ListCallExports:output_type -> webitel_media_exporter.ListExportsResponse
+	4,  // 17: webitel_media_exporter.PdfService.DownloadCallArchive:output_type -> webitel_media_exporter.DownloadCallArchiveResponse
+	16, // 18: webitel_media_exporter.PdfService.DownloadScreenrecordingArchive:output_type -> webitel_media_exporter.DownloadScreenrecordingArchiveResponse
+	6,  // 19: webitel_media_exporter.PdfService.DownloadCallScreenrecordingArchive:output_type -> webitel_media_exporter.DownloadCallScreenrecordingArchiveResponse
+	14, // 20: webitel_media_exporter.PdfService.DeleteExport:output_type -> webitel_media_exporter.DeleteExportResponse
+	13, // [13:21] is the sub-list for method output_type
+	5,  // [5:13] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_pdf_proto_init() }
@@ -1195,7 +1274,7 @@ func file_pdf_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pdf_proto_rawDesc), len(file_pdf_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   15,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -84,6 +84,8 @@ type PdfHistoryRequestOptions struct {
 	Page    int32
 	Size    int32
 	Sort    string
+	From    int64
+	To      int64
 }
 
 type CallHistoryRequestOptions struct {
@@ -91,6 +93,8 @@ type CallHistoryRequestOptions struct {
 	Page   int32
 	Size   int32
 	Sort   string
+	From   int64
+	To     int64
 }
 
 // --- Task & Metadata Models ---
