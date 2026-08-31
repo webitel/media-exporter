@@ -27,6 +27,10 @@ func BadRequest(msg string, wrappers ...Wrapper) error {
 	return New(msg, append(wrappers, WithCode(codes.InvalidArgument))...)
 }
 
+func NotFound(msg string, wrappers ...Wrapper) error {
+	return New(msg, append(wrappers, WithCode(codes.NotFound))...)
+}
+
 func Internal(msg string, wrappers ...Wrapper) error {
 	return New(msg, append(wrappers, WithCode(codes.Internal))...)
 }

@@ -5,8 +5,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 
 	"github.com/webitel/media-exporter/api/storage"
+	"github.com/webitel/media-exporter/internal/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type ZipStreamEntry struct {
@@ -16,21 +20,35 @@ type ZipStreamEntry struct {
 
 func StreamZipArchive(w io.Writer, entries []ZipStreamEntry) error {
 	zw := zip.NewWriter(w)
+	added := 0
 
 	for _, entry := range entries {
-		if err := addStreamEntry(zw, entry); err != nil {
+		ok, err := addStreamEntry(zw, entry)
+		if err != nil {
 			_ = zw.Close()
 			return err
 		}
+		if ok {
+			added++
+		}
+	}
+
+	if added == 0 {
+		_ = zw.Close()
+		return errors.NotFound("no available files to archive")
 	}
 
 	return zw.Close()
 }
 
-func addStreamEntry(zw *zip.Writer, entry ZipStreamEntry) error {
+func addStreamEntry(zw *zip.Writer, entry ZipStreamEntry) (bool, error) {
 	src, err := entry.Open()
 	if err != nil {
-		return fmt.Errorf("open %s: %w", entry.Name, err)
+		if status.Code(err) == codes.NotFound {
+			slog.Warn("skipping missing ZIP entry", "name", entry.Name, "error", err)
+			return false, nil
+		}
+		return false, fmt.Errorf("open %s: %w", entry.Name, err)
 	}
 	defer func() { _ = src.Close() }()
 
@@ -39,13 +57,13 @@ func addStreamEntry(zw *zip.Writer, entry ZipStreamEntry) error {
 		Method: zip.Store,
 	})
 	if err != nil {
-		return fmt.Errorf("create zip entry %s: %w", entry.Name, err)
+		return false, fmt.Errorf("create zip entry %s: %w", entry.Name, err)
 	}
 
 	if _, err := io.Copy(fw, src); err != nil {
-		return fmt.Errorf("write zip entry %s: %w", entry.Name, err)
+		return false, fmt.Errorf("write zip entry %s: %w", entry.Name, err)
 	}
-	return nil
+	return true, nil
 }
 
 type storageFileReader struct {
@@ -66,16 +84,29 @@ func NewStorageFileReader(ctx context.Context, client storage.FileServiceClient,
 		return nil, fmt.Errorf("open download stream for file %d: %w", fileID, err)
 	}
 
-	return &storageFileReader{source: stream, cancel: cancel}, nil
+	reader := &storageFileReader{source: stream, cancel: cancel}
+	if err := reader.receive(); err != nil {
+		_ = reader.Close()
+		return nil, fmt.Errorf("read first chunk for file %d: %w", fileID, err)
+	}
+
+	return reader, nil
 }
 
-func (r *storageFileReader) Read(p []byte) (int, error) {
+func (r *storageFileReader) receive() error {
 	for len(r.buffer) == 0 {
 		frame, err := r.source.Recv()
 		if err != nil {
-			return 0, err
+			return err
 		}
 		r.buffer = frame.GetChunk()
+	}
+	return nil
+}
+
+func (r *storageFileReader) Read(p []byte) (int, error) {
+	if err := r.receive(); err != nil {
+		return 0, err
 	}
 
 	n := copy(p, r.buffer)

@@ -159,7 +159,11 @@ func (h *PdfHandler) DownloadCallArchive(req *pdfapi.DownloadCallArchiveRequest,
 		return err
 	}
 
-	w := &archiveChunkWriter{stream: stream}
+	w := &chunkWriter{
+		send: func(chunk []byte) error {
+			return stream.Send(&pdfapi.DownloadCallArchiveResponse{Data: chunk})
+		},
+	}
 
 	return h.service.DownloadCallArchive(ctx, opts, &domain.DownloadCallArchiveRequest{
 		CallID:  req.GetCallId(),
@@ -167,17 +171,15 @@ func (h *PdfHandler) DownloadCallArchive(req *pdfapi.DownloadCallArchiveRequest,
 	}, w)
 }
 
-// archiveChunkWriter adapts the outbound gRPC stream to an io.Writer so the ZIP builder in
-// the service layer can stay agnostic of gRPC/proto specifics.
-type archiveChunkWriter struct {
-	stream pdfapi.PdfService_DownloadCallArchiveServer
+// chunkWriter adapts a gRPC stream sender to the io.Writer expected by the ZIP service.
+type chunkWriter struct {
+	send func([]byte) error
 }
 
-func (w *archiveChunkWriter) Write(p []byte) (int, error) {
-	chunk := make([]byte, len(p))
-	copy(chunk, p)
+func (w *chunkWriter) Write(p []byte) (int, error) {
+	chunk := append([]byte(nil), p...)
 
-	if err := w.stream.Send(&pdfapi.DownloadCallArchiveResponse{Data: chunk}); err != nil {
+	if err := w.send(chunk); err != nil {
 		return 0, err
 	}
 
@@ -221,31 +223,52 @@ func (h *PdfHandler) DownloadScreenrecordingArchive(req *pdfapi.DownloadScreenre
 		return err
 	}
 
-	w := &screenrecordingArchiveChunkWriter{
-		stream: stream,
+	w := &chunkWriter{
+		send: func(chunk []byte) error {
+			return stream.Send(&pdfapi.DownloadScreenrecordingArchiveResponse{Data: chunk})
+		},
 	}
 
 	return h.service.DownloadScreenrecordingArchive(ctx, opts, archiveRequest, w)
 }
 
-// screenrecordingArchiveChunkWriter adapts the screen recording archive
-// gRPC stream to the io.Writer expected by the ZIP service.
-type screenrecordingArchiveChunkWriter struct {
-	stream pdfapi.PdfService_DownloadScreenrecordingArchiveServer
-}
+// --- Call Screenrecording Archive (ZIP) Exports ---
 
-func (w *screenrecordingArchiveChunkWriter) Write(p []byte) (int, error) {
-	chunk := append([]byte(nil), p...)
-
-	if err := w.stream.Send(
-		&pdfapi.DownloadScreenrecordingArchiveResponse{
-			Data: chunk,
-		},
-	); err != nil {
-		return 0, err
+func (h *PdfHandler) DownloadCallScreenrecordingArchive(req *pdfapi.DownloadCallScreenrecordingArchiveRequest, stream pdfapi.PdfService_DownloadCallScreenrecordingArchiveServer) error {
+	if req.GetCallId() == "" {
+		return errors.BadRequest("call_id is required")
 	}
 
-	return len(p), nil
+	ctx := stream.Context()
+
+	opts, err := options.NewCreateOptions(ctx)
+	if err != nil {
+		return err
+	}
+
+	archiveRequest := &domain.DownloadCallScreenrecordingArchiveRequest{
+		CallID:  req.GetCallId(),
+		FileIDs: req.GetFileIds(),
+		From:    req.GetFrom(),
+		To:      req.GetTo(),
+	}
+
+	archiveMeta, err := h.service.PrepareCallScreenrecordingArchiveMetadata(ctx, archiveRequest)
+	if err != nil {
+		return err
+	}
+
+	if err := googlegrpc.SetHeader(ctx, metadata.Pairs("filename", archiveMeta.Name, "format", "zip")); err != nil {
+		return err
+	}
+
+	w := &chunkWriter{
+		send: func(chunk []byte) error {
+			return stream.Send(&pdfapi.DownloadCallScreenrecordingArchiveResponse{Data: chunk})
+		},
+	}
+
+	return h.service.DownloadCallScreenrecordingArchive(ctx, opts, archiveRequest, w)
 }
 
 // --- General Operations ---

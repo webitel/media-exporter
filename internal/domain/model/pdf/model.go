@@ -64,6 +64,15 @@ type DownloadScreenrecordingArchiveRequest struct {
 	To      int64
 }
 
+// DownloadCallScreenrecordingArchiveRequest selects original screen recording
+// videos associated with a call for synchronous ZIP streaming.
+type DownloadCallScreenrecordingArchiveRequest struct {
+	CallID  string
+	FileIDs []int64
+	From    int64
+	To      int64
+}
+
 // ArchiveMetadata describes the archive before its bytes start streaming.
 type ArchiveMetadata struct {
 	Name     string
