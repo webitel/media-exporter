@@ -64,6 +64,15 @@ type DownloadScreenrecordingArchiveRequest struct {
 	To      int64
 }
 
+// DownloadScreenshotArchiveRequest describes the agent's screenshots that
+// should be included in a streamed ZIP archive.
+type DownloadScreenshotArchiveRequest struct {
+	AgentID int64
+	FileIDs []int64
+	From    int64
+	To      int64
+}
+
 // DownloadCallScreenrecordingArchiveRequest selects original screen recording
 // videos associated with a call for synchronous ZIP streaming.
 type DownloadCallScreenrecordingArchiveRequest struct {

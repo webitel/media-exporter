@@ -25,6 +25,7 @@ const (
 	PdfService_ListCallExports_FullMethodName                    = "/webitel_media_exporter.PdfService/ListCallExports"
 	PdfService_DownloadCallArchive_FullMethodName                = "/webitel_media_exporter.PdfService/DownloadCallArchive"
 	PdfService_DownloadScreenrecordingArchive_FullMethodName     = "/webitel_media_exporter.PdfService/DownloadScreenrecordingArchive"
+	PdfService_DownloadScreenshotArchive_FullMethodName          = "/webitel_media_exporter.PdfService/DownloadScreenshotArchive"
 	PdfService_DownloadCallScreenrecordingArchive_FullMethodName = "/webitel_media_exporter.PdfService/DownloadCallScreenrecordingArchive"
 	PdfService_DeleteExport_FullMethodName                       = "/webitel_media_exporter.PdfService/DeleteExport"
 )
@@ -53,6 +54,9 @@ type PdfServiceClient interface {
 	// Streams original screen recording videos packed into a ZIP archive.
 	// The archive is assembled on the fly without creating a temporary file.
 	DownloadScreenrecordingArchive(ctx context.Context, in *DownloadScreenrecordingArchiveRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DownloadScreenrecordingArchiveResponse], error)
+	// Streams original screenshots packed into a ZIP archive.
+	// The archive is assembled on the fly without creating a temporary file.
+	DownloadScreenshotArchive(ctx context.Context, in *DownloadScreenshotArchiveRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DownloadScreenshotArchiveResponse], error)
 	// Streams original screen recording videos associated with a specific call
 	// as a ZIP archive assembled on the fly.
 	DownloadCallScreenrecordingArchive(ctx context.Context, in *DownloadCallScreenrecordingArchiveRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DownloadCallScreenrecordingArchiveResponse], error)
@@ -146,9 +150,28 @@ func (c *pdfServiceClient) DownloadScreenrecordingArchive(ctx context.Context, i
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type PdfService_DownloadScreenrecordingArchiveClient = grpc.ServerStreamingClient[DownloadScreenrecordingArchiveResponse]
 
+func (c *pdfServiceClient) DownloadScreenshotArchive(ctx context.Context, in *DownloadScreenshotArchiveRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DownloadScreenshotArchiveResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &PdfService_ServiceDesc.Streams[2], PdfService_DownloadScreenshotArchive_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[DownloadScreenshotArchiveRequest, DownloadScreenshotArchiveResponse]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type PdfService_DownloadScreenshotArchiveClient = grpc.ServerStreamingClient[DownloadScreenshotArchiveResponse]
+
 func (c *pdfServiceClient) DownloadCallScreenrecordingArchive(ctx context.Context, in *DownloadCallScreenrecordingArchiveRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DownloadCallScreenrecordingArchiveResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &PdfService_ServiceDesc.Streams[2], PdfService_DownloadCallScreenrecordingArchive_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &PdfService_ServiceDesc.Streams[3], PdfService_DownloadCallScreenrecordingArchive_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -199,6 +222,9 @@ type PdfServiceServer interface {
 	// Streams original screen recording videos packed into a ZIP archive.
 	// The archive is assembled on the fly without creating a temporary file.
 	DownloadScreenrecordingArchive(*DownloadScreenrecordingArchiveRequest, grpc.ServerStreamingServer[DownloadScreenrecordingArchiveResponse]) error
+	// Streams original screenshots packed into a ZIP archive.
+	// The archive is assembled on the fly without creating a temporary file.
+	DownloadScreenshotArchive(*DownloadScreenshotArchiveRequest, grpc.ServerStreamingServer[DownloadScreenshotArchiveResponse]) error
 	// Streams original screen recording videos associated with a specific call
 	// as a ZIP archive assembled on the fly.
 	DownloadCallScreenrecordingArchive(*DownloadCallScreenrecordingArchiveRequest, grpc.ServerStreamingServer[DownloadCallScreenrecordingArchiveResponse]) error
@@ -231,6 +257,9 @@ func (UnimplementedPdfServiceServer) DownloadCallArchive(*DownloadCallArchiveReq
 }
 func (UnimplementedPdfServiceServer) DownloadScreenrecordingArchive(*DownloadScreenrecordingArchiveRequest, grpc.ServerStreamingServer[DownloadScreenrecordingArchiveResponse]) error {
 	return status.Error(codes.Unimplemented, "method DownloadScreenrecordingArchive not implemented")
+}
+func (UnimplementedPdfServiceServer) DownloadScreenshotArchive(*DownloadScreenshotArchiveRequest, grpc.ServerStreamingServer[DownloadScreenshotArchiveResponse]) error {
+	return status.Error(codes.Unimplemented, "method DownloadScreenshotArchive not implemented")
 }
 func (UnimplementedPdfServiceServer) DownloadCallScreenrecordingArchive(*DownloadCallScreenrecordingArchiveRequest, grpc.ServerStreamingServer[DownloadCallScreenrecordingArchiveResponse]) error {
 	return status.Error(codes.Unimplemented, "method DownloadCallScreenrecordingArchive not implemented")
@@ -353,6 +382,17 @@ func _PdfService_DownloadScreenrecordingArchive_Handler(srv interface{}, stream 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type PdfService_DownloadScreenrecordingArchiveServer = grpc.ServerStreamingServer[DownloadScreenrecordingArchiveResponse]
 
+func _PdfService_DownloadScreenshotArchive_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(DownloadScreenshotArchiveRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(PdfServiceServer).DownloadScreenshotArchive(m, &grpc.GenericServerStream[DownloadScreenshotArchiveRequest, DownloadScreenshotArchiveResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type PdfService_DownloadScreenshotArchiveServer = grpc.ServerStreamingServer[DownloadScreenshotArchiveResponse]
+
 func _PdfService_DownloadCallScreenrecordingArchive_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(DownloadCallScreenrecordingArchiveRequest)
 	if err := stream.RecvMsg(m); err != nil {
@@ -419,6 +459,11 @@ var PdfService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "DownloadScreenrecordingArchive",
 			Handler:       _PdfService_DownloadScreenrecordingArchive_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "DownloadScreenshotArchive",
+			Handler:       _PdfService_DownloadScreenshotArchive_Handler,
 			ServerStreams: true,
 		},
 		{
