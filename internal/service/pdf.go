@@ -468,7 +468,7 @@ func (s *PdfServiceImpl) searchCallScreenrecordingArchiveFiles(ctx context.Conte
 		Size:    pageSize,
 		Sort:    "+id",
 		Type:    storage.ScreenrecordingType_SCREENSHARING,
-		Channel: storage.ScreenrecordingChannel_CALL,
+		Channel: storage.ScreenrecordingChannel_SCREENRECORDING,
 	}
 
 	// Explicitly selected files take precedence over the date filter.
