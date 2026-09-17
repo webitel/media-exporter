@@ -475,7 +475,7 @@ func (s *PdfServiceImpl) searchCallScreenrecordingArchiveFiles(ctx context.Conte
 	if len(req.FileIDs) > 0 {
 		search.Id = req.FileIDs
 	} else if req.From != 0 || req.To != 0 {
-		search.UploadedAt = &engine.FilterBetween{
+		search.StartAt = &engine.FilterBetween{
 			From: req.From,
 			To:   req.To,
 		}
