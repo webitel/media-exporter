@@ -1,6 +1,6 @@
 module github.com/webitel/media-exporter
 
-go 1.25.0
+go 1.26.0
 
 require (
 	buf.build/gen/go/webitel/webitel-go/grpc/go v1.5.1-20251120142856-5d7af0448070.2
@@ -24,7 +24,7 @@ require (
 	go.opentelemetry.io/otel v1.38.0
 	go.opentelemetry.io/otel/sdk v1.38.0
 	go.opentelemetry.io/otel/trace v1.38.0
-	golang.org/x/sync v0.17.0
+	golang.org/x/sync v0.23.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250929231259-57b25ae835d4
 	google.golang.org/grpc v1.72.2
 	google.golang.org/protobuf v1.36.10
