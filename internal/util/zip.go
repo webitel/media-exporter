@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"time"
 
 	"github.com/webitel/media-exporter/api/storage"
 	"github.com/webitel/media-exporter/internal/errors"
@@ -14,8 +15,9 @@ import (
 )
 
 type ZipStreamEntry struct {
-	Name string // name to use for the file inside the archive
-	Open func() (io.ReadCloser, error)
+	Name       string // name to use for the file inside the archive
+	ModifiedAt int64  // file modification time, Unix millis; 0 = archive creation time
+	Open       func() (io.ReadCloser, error)
 }
 
 func StreamZipArchive(w io.Writer, entries []ZipStreamEntry) error {
@@ -52,9 +54,15 @@ func addStreamEntry(zw *zip.Writer, entry ZipStreamEntry) (bool, error) {
 	}
 	defer func() { _ = src.Close() }()
 
+	modified := time.Now()
+	if entry.ModifiedAt > 0 {
+		modified = time.UnixMilli(entry.ModifiedAt)
+	}
+
 	fw, err := zw.CreateHeader(&zip.FileHeader{
-		Name:   entry.Name,
-		Method: zip.Store,
+		Name:     entry.Name,
+		Method:   zip.Store,
+		Modified: modified,
 	})
 	if err != nil {
 		return false, fmt.Errorf("create zip entry %s: %w", entry.Name, err)
