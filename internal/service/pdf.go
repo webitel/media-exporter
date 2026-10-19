@@ -178,7 +178,8 @@ func (s *PdfServiceImpl) DownloadScreenrecordingArchive(ctx context.Context, opt
 		name := uniqueArchiveEntryName(screenrecordingArchiveEntryName(file), usedNames)
 
 		entries = append(entries, util.ZipStreamEntry{
-			Name: name,
+			Name:       name,
+			ModifiedAt: file.GetUploadedAt(),
 			Open: func() (io.ReadCloser, error) {
 				return util.NewStorageFileReader(
 					ctx,
@@ -321,7 +322,8 @@ func (s *PdfServiceImpl) DownloadScreenshotArchive(ctx context.Context, opts *op
 		name := uniqueArchiveEntryName(archiveEntryName(file, "screenshot"), usedNames)
 
 		entries = append(entries, util.ZipStreamEntry{
-			Name: name,
+			Name:       name,
+			ModifiedAt: file.GetUploadedAt(),
 			Open: func() (io.ReadCloser, error) {
 				return util.NewStorageFileReader(ctx, s.storageClient, domainID, fileID)
 			},
@@ -399,7 +401,8 @@ func (s *PdfServiceImpl) DownloadCallArchive(ctx context.Context, opts *options.
 	entries := make([]util.ZipStreamEntry, 0, len(filesResp.GetItems()))
 	for _, f := range filesResp.GetItems() {
 		entries = append(entries, util.ZipStreamEntry{
-			Name: fmt.Sprintf("%d_%s", f.GetId(), f.GetName()),
+			Name:       fmt.Sprintf("%d_%s", f.GetId(), f.GetName()),
+			ModifiedAt: f.GetUploadedAt(),
 			Open: func() (io.ReadCloser, error) {
 				return util.NewStorageFileReader(ctx, s.storageClient, domainID, f.GetId())
 			},
@@ -532,7 +535,8 @@ func (s *PdfServiceImpl) DownloadCallScreenrecordingArchive(ctx context.Context,
 		name := uniqueArchiveEntryName(screenrecordingArchiveEntryName(file), usedNames)
 
 		entries = append(entries, util.ZipStreamEntry{
-			Name: name,
+			Name:       name,
+			ModifiedAt: file.GetUploadedAt(),
 			Open: func() (io.ReadCloser, error) {
 				return util.NewStorageFileReader(ctx, s.storageClient, domainID, fileID)
 			},
