@@ -35,7 +35,6 @@ ProtectHome=yes
 PrivateTmp=yes
 NoExecPaths=/
 ExecPaths=/usr/local/bin/webitel-media-exporter
-ExecPaths=/usr/bin/ffmpeg
 
 # Process isolation
 PrivateDevices=yes
