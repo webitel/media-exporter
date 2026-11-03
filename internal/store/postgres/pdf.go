@@ -135,6 +135,57 @@ func (m *Pdf) listHistory(filter sq.Sqlizer, page, size int64, sort string) (*do
 	}, nil
 }
 
+func (m *Pdf) ListDonePdfExports(ctx context.Context, domainID int64, req *domain.DownloadAgentPdfArchiveRequest) ([]*domain.HistoryRecord, error) {
+	db, err := m.storage.Database()
+	if err != nil {
+		return nil, dberr.NewDBInternalError("list_done_pdf_exports", err)
+	}
+
+	filter := sq.And{
+		sq.Eq{"h.dc": domainID},
+		sq.Eq{"h.agent_id": req.AgentID},
+		sq.Eq{"h.status": "done"},
+		sq.Expr("EXISTS (SELECT 1 FROM storage.files f WHERE f.id = h.file_id AND f.removed IS NULL)"),
+	}
+	if len(req.FileIDs) > 0 {
+		filter = append(filter, sq.Eq{"h.file_id": req.FileIDs})
+	} else {
+		filter = appendUploadedAtRange(filter, req.From, req.To)
+	}
+
+	sqlStr, args, err := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).
+		Select("h.id", "h.name", "h.file_id").
+		From("media_exporter.pdf_export_history h").
+		Where(filter).
+		OrderBy("h.id").
+		ToSql()
+	if err != nil {
+		return nil, dberr.NewDBInternalError("list_done_pdf_exports", err)
+	}
+
+	rows, err := db.Query(ctx, sqlStr, args...)
+	if err != nil {
+		return nil, dberr.NewDBInternalError("list_done_pdf_exports", err)
+	}
+	defer rows.Close()
+
+	var records []*domain.HistoryRecord
+	for rows.Next() {
+		var rec domain.HistoryRecord
+		if err := rows.Scan(&rec.ID, &rec.Name, &rec.FileID); err != nil {
+			return nil, dberr.NewDBInternalError("list_done_pdf_exports", err)
+		}
+
+		records = append(records, &rec)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, dberr.NewDBInternalError("list_done_pdf_exports", err)
+	}
+
+	return records, nil
+}
+
 // --- Mutations ---
 
 func (m *Pdf) InsertPdfExportHistory(opts *options.CreateOptions, input *domain.NewExportHistory) (int64, error) {

@@ -329,8 +329,8 @@ type DownloadCallScreenrecordingArchiveRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	CallId        string                 `protobuf:"bytes,1,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`            // Unique identifier of the call.
 	FileIds       []int64                `protobuf:"varint,2,rep,packed,name=file_ids,json=fileIds,proto3" json:"file_ids,omitempty"` // Optional IDs of selected screen recordings.
-	From          int64                  `protobuf:"varint,3,opt,name=from,proto3" json:"from,omitempty"`                             // Start of the uploaded_at range (Unix millis).
-	To            int64                  `protobuf:"varint,4,opt,name=to,proto3" json:"to,omitempty"`                                 // End of the uploaded_at range (Unix millis).
+	From          int64                  `protobuf:"varint,3,opt,name=from,proto3" json:"from,omitempty"`                             // Start of the start_at range (Unix millis).
+	To            int64                  `protobuf:"varint,4,opt,name=to,proto3" json:"to,omitempty"`                                 // End of the start_at range (Unix millis).
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1215,6 +1215,121 @@ func (x *DownloadScreenshotArchiveResponse) GetData() []byte {
 	return nil
 }
 
+// Request for streaming completed PDF exports of one agent as a ZIP archive.
+type DownloadAgentPdfArchiveRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AgentId       int64                  `protobuf:"varint,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`        // Unique identifier of the agent.
+	FileIds       []int64                `protobuf:"varint,2,rep,packed,name=file_ids,json=fileIds,proto3" json:"file_ids,omitempty"` // Optional storage file IDs of selected PDFs.
+	From          int64                  `protobuf:"varint,3,opt,name=from,proto3" json:"from,omitempty"`                             // Start of the uploaded_at range (Unix millis).
+	To            int64                  `protobuf:"varint,4,opt,name=to,proto3" json:"to,omitempty"`                                 // End of the uploaded_at range (Unix millis).
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DownloadAgentPdfArchiveRequest) Reset() {
+	*x = DownloadAgentPdfArchiveRequest{}
+	mi := &file_pdf_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DownloadAgentPdfArchiveRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DownloadAgentPdfArchiveRequest) ProtoMessage() {}
+
+func (x *DownloadAgentPdfArchiveRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_pdf_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DownloadAgentPdfArchiveRequest.ProtoReflect.Descriptor instead.
+func (*DownloadAgentPdfArchiveRequest) Descriptor() ([]byte, []int) {
+	return file_pdf_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *DownloadAgentPdfArchiveRequest) GetAgentId() int64 {
+	if x != nil {
+		return x.AgentId
+	}
+	return 0
+}
+
+func (x *DownloadAgentPdfArchiveRequest) GetFileIds() []int64 {
+	if x != nil {
+		return x.FileIds
+	}
+	return nil
+}
+
+func (x *DownloadAgentPdfArchiveRequest) GetFrom() int64 {
+	if x != nil {
+		return x.From
+	}
+	return 0
+}
+
+func (x *DownloadAgentPdfArchiveRequest) GetTo() int64 {
+	if x != nil {
+		return x.To
+	}
+	return 0
+}
+
+// One frame of a streamed PDF ZIP archive.
+// The archive name is sent through the "filename" gRPC response header.
+type DownloadAgentPdfArchiveResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Data          []byte                 `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DownloadAgentPdfArchiveResponse) Reset() {
+	*x = DownloadAgentPdfArchiveResponse{}
+	mi := &file_pdf_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DownloadAgentPdfArchiveResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DownloadAgentPdfArchiveResponse) ProtoMessage() {}
+
+func (x *DownloadAgentPdfArchiveResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pdf_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DownloadAgentPdfArchiveResponse.ProtoReflect.Descriptor instead.
+func (*DownloadAgentPdfArchiveResponse) Descriptor() ([]byte, []int) {
+	return file_pdf_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *DownloadAgentPdfArchiveResponse) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
 var File_pdf_proto protoreflect.FileDescriptor
 
 const file_pdf_proto_rawDesc = "" +
@@ -1302,6 +1417,13 @@ const file_pdf_proto_rawDesc = "" +
 	"\x04from\x18\x03 \x01(\x03R\x04from\x12\x0e\n" +
 	"\x02to\x18\x04 \x01(\x03R\x02to\"7\n" +
 	"!DownloadScreenshotArchiveResponse\x12\x12\n" +
+	"\x04data\x18\x01 \x01(\fR\x04data\"z\n" +
+	"\x1eDownloadAgentPdfArchiveRequest\x12\x19\n" +
+	"\bagent_id\x18\x01 \x01(\x03R\aagentId\x12\x19\n" +
+	"\bfile_ids\x18\x02 \x03(\x03R\afileIds\x12\x12\n" +
+	"\x04from\x18\x03 \x01(\x03R\x04from\x12\x0e\n" +
+	"\x02to\x18\x04 \x01(\x03R\x02to\"5\n" +
+	"\x1fDownloadAgentPdfArchiveResponse\x12\x12\n" +
 	"\x04data\x18\x01 \x01(\fR\x04data*`\n" +
 	"\fExportStatus\x12\x1d\n" +
 	"\x19EXPORT_STATUS_UNSPECIFIED\x10\x00\x12\v\n" +
@@ -1310,7 +1432,7 @@ const file_pdf_proto_rawDesc = "" +
 	"PROCESSING\x10\x02\x12\b\n" +
 	"\x04DONE\x10\x03\x12\n" +
 	"\n" +
-	"\x06FAILED\x10\x042\x81\r\n" +
+	"\x06FAILED\x10\x042\xc1\x0e\n" +
 	"\n" +
 	"PdfService\x12\xb3\x01\n" +
 	"\x1bCreateScreenrecordingExport\x124.webitel_media_exporter.CreateScreenrecordingRequest\x1a\".webitel_media_exporter.ExportTask\":\x82\xd3\xe4\x93\x024:\x01*\"//agents/{agent_id}/exports/pdf/screenrecordings\x12\xbd\x01\n" +
@@ -1319,7 +1441,8 @@ const file_pdf_proto_rawDesc = "" +
 	"\x0fListCallExports\x12..webitel_media_exporter.ListCallHistoryRequest\x1a+.webitel_media_exporter.ListExportsResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/calls/{call_id}/exports/pdf\x12\xaa\x01\n" +
 	"\x13DownloadCallArchive\x122.webitel_media_exporter.DownloadCallArchiveRequest\x1a3.webitel_media_exporter.DownloadCallArchiveResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /calls/{call_id}/exports/archive0\x01\x12\xde\x01\n" +
 	"\x1eDownloadScreenrecordingArchive\x12=.webitel_media_exporter.DownloadScreenrecordingArchiveRequest\x1a>.webitel_media_exporter.DownloadScreenrecordingArchiveResponse\";\x82\xd3\xe4\x93\x025\x123/agents/{agent_id}/exports/archive/screenrecordings0\x01\x12\xca\x01\n" +
-	"\x19DownloadScreenshotArchive\x128.webitel_media_exporter.DownloadScreenshotArchiveRequest\x1a9.webitel_media_exporter.DownloadScreenshotArchiveResponse\"6\x82\xd3\xe4\x93\x020\x12./agents/{agent_id}/exports/archive/screenshots0\x01\x12\xe8\x01\n" +
+	"\x19DownloadScreenshotArchive\x128.webitel_media_exporter.DownloadScreenshotArchiveRequest\x1a9.webitel_media_exporter.DownloadScreenshotArchiveResponse\"6\x82\xd3\xe4\x93\x020\x12./agents/{agent_id}/exports/archive/screenshots0\x01\x12\xbd\x01\n" +
+	"\x17DownloadAgentPdfArchive\x126.webitel_media_exporter.DownloadAgentPdfArchiveRequest\x1a7.webitel_media_exporter.DownloadAgentPdfArchiveResponse\"/\x82\xd3\xe4\x93\x02)\x12'/agents/{agent_id}/exports/archive/pdfs0\x01\x12\xe8\x01\n" +
 	"\"DownloadCallScreenrecordingArchive\x12A.webitel_media_exporter.DownloadCallScreenrecordingArchiveRequest\x1aB.webitel_media_exporter.DownloadCallScreenrecordingArchiveResponse\"9\x82\xd3\xe4\x93\x023\x121/calls/{call_id}/exports/archive/screenrecordings0\x01\x12\x8c\x01\n" +
 	"\fDeleteExport\x12+.webitel_media_exporter.DeleteExportRequest\x1a,.webitel_media_exporter.DeleteExportResponse\"!\x82\xd3\xe4\x93\x02\x1b*\x19/exports/pdf/history/{id}B\xba\x01\n" +
 	"\x1acom.webitel_media_exporterB\bPdfProtoP\x01Z\"github.com/webitel/pdf/api/pdf;pdf\xa2\x02\x03WXX\xaa\x02\x14WebitelMediaExporter\xca\x02\x14WebitelMediaExporter\xe2\x02 WebitelMediaExporter\\GPBMetadata\xea\x02\x14WebitelMediaExporterb\x06proto3"
@@ -1337,7 +1460,7 @@ func file_pdf_proto_rawDescGZIP() []byte {
 }
 
 var file_pdf_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_pdf_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_pdf_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_pdf_proto_goTypes = []any{
 	(ExportStatus)(0),                                  // 0: webitel_media_exporter.ExportStatus
 	(*CreateScreenrecordingRequest)(nil),               // 1: webitel_media_exporter.CreateScreenrecordingRequest
@@ -1358,6 +1481,8 @@ var file_pdf_proto_goTypes = []any{
 	(*DownloadScreenrecordingArchiveResponse)(nil),     // 16: webitel_media_exporter.DownloadScreenrecordingArchiveResponse
 	(*DownloadScreenshotArchiveRequest)(nil),           // 17: webitel_media_exporter.DownloadScreenshotArchiveRequest
 	(*DownloadScreenshotArchiveResponse)(nil),          // 18: webitel_media_exporter.DownloadScreenshotArchiveResponse
+	(*DownloadAgentPdfArchiveRequest)(nil),             // 19: webitel_media_exporter.DownloadAgentPdfArchiveRequest
+	(*DownloadAgentPdfArchiveResponse)(nil),            // 20: webitel_media_exporter.DownloadAgentPdfArchiveResponse
 }
 var file_pdf_proto_depIdxs = []int32{
 	9,  // 0: webitel_media_exporter.ListScreenrecordingHistoryRequest.uploaded_at:type_name -> webitel_media_exporter.FilterBetween
@@ -1372,19 +1497,21 @@ var file_pdf_proto_depIdxs = []int32{
 	3,  // 9: webitel_media_exporter.PdfService.DownloadCallArchive:input_type -> webitel_media_exporter.DownloadCallArchiveRequest
 	15, // 10: webitel_media_exporter.PdfService.DownloadScreenrecordingArchive:input_type -> webitel_media_exporter.DownloadScreenrecordingArchiveRequest
 	17, // 11: webitel_media_exporter.PdfService.DownloadScreenshotArchive:input_type -> webitel_media_exporter.DownloadScreenshotArchiveRequest
-	5,  // 12: webitel_media_exporter.PdfService.DownloadCallScreenrecordingArchive:input_type -> webitel_media_exporter.DownloadCallScreenrecordingArchiveRequest
-	13, // 13: webitel_media_exporter.PdfService.DeleteExport:input_type -> webitel_media_exporter.DeleteExportRequest
-	11, // 14: webitel_media_exporter.PdfService.CreateScreenrecordingExport:output_type -> webitel_media_exporter.ExportTask
-	10, // 15: webitel_media_exporter.PdfService.ListScreenrecordingExports:output_type -> webitel_media_exporter.ListExportsResponse
-	11, // 16: webitel_media_exporter.PdfService.CreateCallExport:output_type -> webitel_media_exporter.ExportTask
-	10, // 17: webitel_media_exporter.PdfService.ListCallExports:output_type -> webitel_media_exporter.ListExportsResponse
-	4,  // 18: webitel_media_exporter.PdfService.DownloadCallArchive:output_type -> webitel_media_exporter.DownloadCallArchiveResponse
-	16, // 19: webitel_media_exporter.PdfService.DownloadScreenrecordingArchive:output_type -> webitel_media_exporter.DownloadScreenrecordingArchiveResponse
-	18, // 20: webitel_media_exporter.PdfService.DownloadScreenshotArchive:output_type -> webitel_media_exporter.DownloadScreenshotArchiveResponse
-	6,  // 21: webitel_media_exporter.PdfService.DownloadCallScreenrecordingArchive:output_type -> webitel_media_exporter.DownloadCallScreenrecordingArchiveResponse
-	14, // 22: webitel_media_exporter.PdfService.DeleteExport:output_type -> webitel_media_exporter.DeleteExportResponse
-	14, // [14:23] is the sub-list for method output_type
-	5,  // [5:14] is the sub-list for method input_type
+	19, // 12: webitel_media_exporter.PdfService.DownloadAgentPdfArchive:input_type -> webitel_media_exporter.DownloadAgentPdfArchiveRequest
+	5,  // 13: webitel_media_exporter.PdfService.DownloadCallScreenrecordingArchive:input_type -> webitel_media_exporter.DownloadCallScreenrecordingArchiveRequest
+	13, // 14: webitel_media_exporter.PdfService.DeleteExport:input_type -> webitel_media_exporter.DeleteExportRequest
+	11, // 15: webitel_media_exporter.PdfService.CreateScreenrecordingExport:output_type -> webitel_media_exporter.ExportTask
+	10, // 16: webitel_media_exporter.PdfService.ListScreenrecordingExports:output_type -> webitel_media_exporter.ListExportsResponse
+	11, // 17: webitel_media_exporter.PdfService.CreateCallExport:output_type -> webitel_media_exporter.ExportTask
+	10, // 18: webitel_media_exporter.PdfService.ListCallExports:output_type -> webitel_media_exporter.ListExportsResponse
+	4,  // 19: webitel_media_exporter.PdfService.DownloadCallArchive:output_type -> webitel_media_exporter.DownloadCallArchiveResponse
+	16, // 20: webitel_media_exporter.PdfService.DownloadScreenrecordingArchive:output_type -> webitel_media_exporter.DownloadScreenrecordingArchiveResponse
+	18, // 21: webitel_media_exporter.PdfService.DownloadScreenshotArchive:output_type -> webitel_media_exporter.DownloadScreenshotArchiveResponse
+	20, // 22: webitel_media_exporter.PdfService.DownloadAgentPdfArchive:output_type -> webitel_media_exporter.DownloadAgentPdfArchiveResponse
+	6,  // 23: webitel_media_exporter.PdfService.DownloadCallScreenrecordingArchive:output_type -> webitel_media_exporter.DownloadCallScreenrecordingArchiveResponse
+	14, // 24: webitel_media_exporter.PdfService.DeleteExport:output_type -> webitel_media_exporter.DeleteExportResponse
+	15, // [15:25] is the sub-list for method output_type
+	5,  // [5:15] is the sub-list for method input_type
 	5,  // [5:5] is the sub-list for extension type_name
 	5,  // [5:5] is the sub-list for extension extendee
 	0,  // [0:5] is the sub-list for field type_name
@@ -1401,7 +1528,7 @@ func file_pdf_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pdf_proto_rawDesc), len(file_pdf_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   18,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

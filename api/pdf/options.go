@@ -109,6 +109,17 @@ var WebitelAPI = WebitelServicesInfo{
 					},
 				},
 			},
+			"DownloadAgentPdfArchive": WebitelMethod{
+				Access: 0,
+				Input:  "DownloadAgentPdfArchiveRequest",
+				Output: "DownloadAgentPdfArchiveResponse",
+				HttpBindings: []*HttpBinding{
+					{
+						Path:   "/agents/{agent_id}/exports/archive/pdfs",
+						Method: "GET",
+					},
+				},
+			},
 			"DownloadCallScreenrecordingArchive": WebitelMethod{
 				Access: 0,
 				Input:  "DownloadCallScreenrecordingArchiveRequest",
