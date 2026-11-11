@@ -109,10 +109,10 @@ var WebitelAPI = WebitelServicesInfo{
 					},
 				},
 			},
-			"DownloadAgentPdfArchive": WebitelMethod{
+			"DownloadPdfArchive": WebitelMethod{
 				Access: 0,
-				Input:  "DownloadAgentPdfArchiveRequest",
-				Output: "DownloadAgentPdfArchiveResponse",
+				Input:  "DownloadPdfArchiveRequest",
+				Output: "DownloadPdfArchiveResponse",
 				HttpBindings: []*HttpBinding{
 					{
 						Path:   "/agents/{agent_id}/exports/archive/pdfs",

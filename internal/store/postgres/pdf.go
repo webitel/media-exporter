@@ -135,17 +135,17 @@ func (m *Pdf) listHistory(filter sq.Sqlizer, page, size int64, sort string) (*do
 	}, nil
 }
 
-func (m *Pdf) ListDonePdfExports(ctx context.Context, domainID int64, req *domain.DownloadAgentPdfArchiveRequest) ([]*domain.HistoryRecord, error) {
+func (m *Pdf) ListDonePdfExports(opts *options.CreateOptions, req *domain.PdfArchiveRequestOptions) ([]*domain.HistoryRecord, error) {
 	db, err := m.storage.Database()
 	if err != nil {
 		return nil, dberr.NewDBInternalError("list_done_pdf_exports", err)
 	}
 
 	filter := sq.And{
-		sq.Eq{"h.dc": domainID},
+		sq.Eq{"h.dc": opts.Auth.GetDomainId()},
 		sq.Eq{"h.agent_id": req.AgentID},
 		sq.Eq{"h.status": "done"},
-		sq.Expr("EXISTS (SELECT 1 FROM storage.files f WHERE f.id = h.file_id AND f.removed IS NULL)"),
+		sq.Expr("EXISTS (SELECT 1 FROM storage.files f WHERE f.id = h.file_id AND f.domain_id = h.dc AND f.removed IS NULL)"),
 	}
 	if len(req.FileIDs) > 0 {
 		filter = append(filter, sq.Eq{"h.file_id": req.FileIDs})
@@ -158,12 +158,13 @@ func (m *Pdf) ListDonePdfExports(ctx context.Context, domainID int64, req *domai
 		From("media_exporter.pdf_export_history h").
 		Where(filter).
 		OrderBy("h.id").
+		Limit(req.Limit).
 		ToSql()
 	if err != nil {
 		return nil, dberr.NewDBInternalError("list_done_pdf_exports", err)
 	}
 
-	rows, err := db.Query(ctx, sqlStr, args...)
+	rows, err := db.Query(opts.Context, sqlStr, args...)
 	if err != nil {
 		return nil, dberr.NewDBInternalError("list_done_pdf_exports", err)
 	}

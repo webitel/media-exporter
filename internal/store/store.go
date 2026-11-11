@@ -1,8 +1,6 @@
 package store
 
 import (
-	"context"
-
 	"github.com/webitel/media-exporter/internal/domain/model/options"
 	domain "github.com/webitel/media-exporter/internal/domain/model/pdf"
 )
@@ -30,7 +28,7 @@ type PdfStore interface {
 	GetCallPdfExportHistory(req *domain.CallHistoryRequestOptions) (*domain.HistoryResponse, error)
 
 	// ListDonePdfExports retrieves all completed PDF exports of an agent that still have a stored file.
-	ListDonePdfExports(ctx context.Context, domainID int64, req *domain.DownloadAgentPdfArchiveRequest) ([]*domain.HistoryRecord, error)
+	ListDonePdfExports(opts *options.CreateOptions, req *domain.PdfArchiveRequestOptions) ([]*domain.HistoryRecord, error)
 
 	// DeletePdfExportRecord removes a specific record from the history.
 	DeletePdfExportRecord(opts *options.DeleteOptions, recordID int64) error

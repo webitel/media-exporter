@@ -73,9 +73,9 @@ type DownloadScreenshotArchiveRequest struct {
 	To      int64
 }
 
-// DownloadAgentPdfArchiveRequest describes the agent's completed PDF exports
+// DownloadPdfArchiveRequest describes the agent's completed PDF exports
 // that should be included in a streamed ZIP archive.
-type DownloadAgentPdfArchiveRequest struct {
+type DownloadPdfArchiveRequest struct {
 	AgentID int64
 	FileIDs []int64
 	From    int64
@@ -104,6 +104,14 @@ type PdfHistoryRequestOptions struct {
 	Sort    string
 	From    int64
 	To      int64
+}
+
+type PdfArchiveRequestOptions struct {
+	AgentID int64
+	FileIDs []int64
+	From    int64
+	To      int64
+	Limit   uint64
 }
 
 type CallHistoryRequestOptions struct {

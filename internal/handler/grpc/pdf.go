@@ -271,9 +271,9 @@ func (h *PdfHandler) DownloadScreenshotArchive(req *pdfapi.DownloadScreenshotArc
 	return h.service.DownloadScreenshotArchive(ctx, opts, archiveRequest, w)
 }
 
-// --- Agent PDF Archive (ZIP) Exports ---
+// --- PDF Archive (ZIP) Exports ---
 
-func (h *PdfHandler) DownloadAgentPdfArchive(req *pdfapi.DownloadAgentPdfArchiveRequest, stream pdfapi.PdfService_DownloadAgentPdfArchiveServer) error {
+func (h *PdfHandler) DownloadPdfArchive(req *pdfapi.DownloadPdfArchiveRequest, stream pdfapi.PdfService_DownloadPdfArchiveServer) error {
 	if req.GetAgentId() == 0 {
 		return errors.BadRequest("agent_id is required")
 	}
@@ -285,14 +285,14 @@ func (h *PdfHandler) DownloadAgentPdfArchive(req *pdfapi.DownloadAgentPdfArchive
 		return err
 	}
 
-	archiveRequest := &domain.DownloadAgentPdfArchiveRequest{
+	archiveRequest := &domain.DownloadPdfArchiveRequest{
 		AgentID: req.GetAgentId(),
 		FileIDs: req.GetFileIds(),
 		From:    req.GetFrom(),
 		To:      req.GetTo(),
 	}
 
-	archiveMeta, err := h.service.PrepareAgentPdfArchiveMetadata(ctx, archiveRequest)
+	archiveMeta, err := h.service.PreparePdfArchiveMetadata(ctx, archiveRequest)
 	if err != nil {
 		return err
 	}
@@ -303,11 +303,11 @@ func (h *PdfHandler) DownloadAgentPdfArchive(req *pdfapi.DownloadAgentPdfArchive
 
 	w := &chunkWriter{
 		send: func(chunk []byte) error {
-			return stream.Send(&pdfapi.DownloadAgentPdfArchiveResponse{Data: chunk})
+			return stream.Send(&pdfapi.DownloadPdfArchiveResponse{Data: chunk})
 		},
 	}
 
-	return h.service.DownloadAgentPdfArchive(ctx, opts, archiveRequest, w)
+	return h.service.DownloadPdfArchive(ctx, opts, archiveRequest, w)
 }
 
 // --- Call Screenrecording Archive (ZIP) Exports ---

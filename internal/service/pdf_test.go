@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"log/slog"
 	"slices"
+	"strings"
 	"testing"
 
 	"google.golang.org/grpc"
@@ -30,13 +32,13 @@ func (fakeAuth) GetDomainId() int64 { return 7 }
 type fakePdfStore struct {
 	store.PdfStore
 
-	records  []*domain.HistoryRecord
-	domainID int64
-	request  *domain.DownloadAgentPdfArchiveRequest
+	records []*domain.HistoryRecord
+	opts    *options.CreateOptions
+	request *domain.PdfArchiveRequestOptions
 }
 
-func (s *fakePdfStore) ListDonePdfExports(_ context.Context, domainID int64, req *domain.DownloadAgentPdfArchiveRequest) ([]*domain.HistoryRecord, error) {
-	s.domainID = domainID
+func (s *fakePdfStore) ListDonePdfExports(opts *options.CreateOptions, req *domain.PdfArchiveRequestOptions) ([]*domain.HistoryRecord, error) {
+	s.opts = opts
 	s.request = req
 
 	return s.records, nil
@@ -62,7 +64,7 @@ func (s *fakeDownloadStream) Recv() (*storage.StreamFile, error) {
 type fakeFileClient struct {
 	storage.FileServiceClient
 
-	pages     [][]*storage.File
+	files     []*storage.File
 	searchErr error
 	searches  []*storage.SearchScreenRecordingsRequest
 }
@@ -73,15 +75,18 @@ func (c *fakeFileClient) SearchScreenRecordings(_ context.Context, in *storage.S
 		return nil, c.searchErr
 	}
 
-	page := int(in.GetPage()) - 1
-	if page >= len(c.pages) {
-		return &storage.ListFile{}, nil
+	var items []*storage.File
+
+	for _, file := range c.files {
+		if slices.Contains(in.GetId(), file.GetId()) {
+			items = append(items, file)
+		}
 	}
 
-	return &storage.ListFile{Items: c.pages[page], Next: page+1 < len(c.pages)}, nil
+	return &storage.ListFile{Items: items, Next: true}, nil
 }
 
-func (c *fakeFileClient) DownloadFile(_ context.Context, in *storage.DownloadFileRequest, _ ...grpc.CallOption) (storage.FileService_DownloadFileClient, error) {
+func (c *fakeFileClient) DownloadFile(_ context.Context, _ *storage.DownloadFileRequest, _ ...grpc.CallOption) (storage.FileService_DownloadFileClient, error) {
 	return &fakeDownloadStream{frames: [][]byte{[]byte("pdf-content")}}, nil
 }
 
@@ -89,103 +94,154 @@ func pdfFile(id int64) *storage.File {
 	return &storage.File{Id: id, ViewName: "stored.pdf.pdf", MimeType: "application/pdf"}
 }
 
-func TestDownloadAgentPdfArchive(t *testing.T) {
-	record := func(fileID int64, name string) *domain.HistoryRecord {
-		return &domain.HistoryRecord{FileID: fileID, Name: name}
-	}
-	permissionDenied := status.Error(codes.PermissionDenied, "forbidden")
+func record(fileID int64, name string) *domain.HistoryRecord {
+	return &domain.HistoryRecord{FileID: fileID, Name: name}
+}
 
+func manyRecords(n int) []*domain.HistoryRecord {
+	records := make([]*domain.HistoryRecord, 0, n)
+	for i := range n {
+		records = append(records, record(int64(i+1), "a.pdf"))
+	}
+
+	return records
+}
+
+func TestDownloadPdfArchive(t *testing.T) {
 	tests := []struct {
 		name         string
-		request      *domain.DownloadAgentPdfArchiveRequest
+		request      *domain.DownloadPdfArchiveRequest
 		records      []*domain.HistoryRecord
-		pages        [][]*storage.File
+		files        []*storage.File
 		searchErr    error
 		wantCode     codes.Code
 		wantEntries  []string
 		wantIDs      []int64
+		wantStore    bool
 		wantSearches int
+		wantLog      string
 	}{
 		{
 			name:         "uses history names for every done export",
-			request:      &domain.DownloadAgentPdfArchiveRequest{AgentID: 1},
+			request:      &domain.DownloadPdfArchiveRequest{AgentID: 1},
 			records:      []*domain.HistoryRecord{record(10, "a.pdf"), record(11, "b.pdf")},
-			pages:        [][]*storage.File{{pdfFile(10), pdfFile(11)}},
+			files:        []*storage.File{pdfFile(10), pdfFile(11)},
 			wantEntries:  []string{"a.pdf", "b.pdf"},
 			wantIDs:      []int64{10, 11},
+			wantStore:    true,
 			wantSearches: 1,
 		},
 		{
-			name:         "follows storage pagination",
-			request:      &domain.DownloadAgentPdfArchiveRequest{AgentID: 1},
-			records:      []*domain.HistoryRecord{record(10, "a.pdf"), record(11, "b.pdf")},
-			pages:        [][]*storage.File{{pdfFile(10)}, {pdfFile(11)}},
+			name:         "sends each file id once and ignores next",
+			request:      &domain.DownloadPdfArchiveRequest{AgentID: 1},
+			records:      []*domain.HistoryRecord{record(10, "a.pdf"), record(10, "a.pdf"), record(11, "b.pdf")},
+			files:        []*storage.File{pdfFile(10), pdfFile(11)},
 			wantEntries:  []string{"a.pdf", "b.pdf"},
 			wantIDs:      []int64{10, 11},
-			wantSearches: 2,
+			wantStore:    true,
+			wantSearches: 1,
 		},
 		{
 			name:         "numbers duplicate names",
-			request:      &domain.DownloadAgentPdfArchiveRequest{AgentID: 1},
+			request:      &domain.DownloadPdfArchiveRequest{AgentID: 1},
 			records:      []*domain.HistoryRecord{record(10, "a.pdf"), record(11, "a.pdf")},
-			pages:        [][]*storage.File{{pdfFile(10), pdfFile(11)}},
+			files:        []*storage.File{pdfFile(10), pdfFile(11)},
 			wantEntries:  []string{"a.pdf", "a (2).pdf"},
 			wantIDs:      []int64{10, 11},
+			wantStore:    true,
 			wantSearches: 1,
 		},
 		{
-			name:         "leaves out files storage does not return",
-			request:      &domain.DownloadAgentPdfArchiveRequest{AgentID: 1},
+			name:         "empty history name falls back to pdf",
+			request:      &domain.DownloadPdfArchiveRequest{AgentID: 1},
+			records:      []*domain.HistoryRecord{record(10, "")},
+			files:        []*storage.File{pdfFile(10)},
+			wantEntries:  []string{"pdf.pdf"},
+			wantIDs:      []int64{10},
+			wantStore:    true,
+			wantSearches: 1,
+		},
+		{
+			name:         "logs files storage does not return",
+			request:      &domain.DownloadPdfArchiveRequest{AgentID: 1},
 			records:      []*domain.HistoryRecord{record(10, "a.pdf"), record(11, "removed.pdf")},
-			pages:        [][]*storage.File{{pdfFile(10)}},
+			files:        []*storage.File{pdfFile(10)},
 			wantEntries:  []string{"a.pdf"},
 			wantIDs:      []int64{10, 11},
+			wantStore:    true,
 			wantSearches: 1,
+			wantLog:      "missing_file_ids=[11]",
 		},
 		{
 			name:     "requires agent id",
-			request:  &domain.DownloadAgentPdfArchiveRequest{},
+			request:  &domain.DownloadPdfArchiveRequest{},
 			wantCode: codes.InvalidArgument,
 		},
 		{
-			name:     "no done exports skips storage",
-			request:  &domain.DownloadAgentPdfArchiveRequest{AgentID: 1},
-			wantCode: codes.NotFound,
+			name:     "rejects too many file ids",
+			request:  &domain.DownloadPdfArchiveRequest{AgentID: 1, FileIDs: make([]int64, maxPdfArchiveFiles+1)},
+			wantCode: codes.InvalidArgument,
+		},
+		{
+			name:      "rejects too many done exports",
+			request:   &domain.DownloadPdfArchiveRequest{AgentID: 1},
+			records:   manyRecords(maxPdfArchiveFiles + 1),
+			wantCode:  codes.InvalidArgument,
+			wantStore: true,
+		},
+		{
+			name:      "no done exports skips storage",
+			request:   &domain.DownloadPdfArchiveRequest{AgentID: 1},
+			wantCode:  codes.NotFound,
+			wantStore: true,
 		},
 		{
 			name:         "no files in storage",
-			request:      &domain.DownloadAgentPdfArchiveRequest{AgentID: 1},
+			request:      &domain.DownloadPdfArchiveRequest{AgentID: 1},
 			records:      []*domain.HistoryRecord{record(10, "a.pdf")},
 			wantCode:     codes.NotFound,
 			wantIDs:      []int64{10},
+			wantStore:    true,
 			wantSearches: 1,
 		},
 		{
 			name:         "keeps storage permission error",
-			request:      &domain.DownloadAgentPdfArchiveRequest{AgentID: 1},
+			request:      &domain.DownloadPdfArchiveRequest{AgentID: 1},
 			records:      []*domain.HistoryRecord{record(10, "a.pdf")},
-			searchErr:    permissionDenied,
+			searchErr:    status.Error(codes.PermissionDenied, "forbidden"),
 			wantCode:     codes.PermissionDenied,
 			wantIDs:      []int64{10},
+			wantStore:    true,
 			wantSearches: 1,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			var logs bytes.Buffer
+
 			pdfStore := &fakePdfStore{records: tc.records}
-			client := &fakeFileClient{pages: tc.pages, searchErr: tc.searchErr}
-			svc := &PdfServiceImpl{store: pdfStore, storageClient: client}
+			client := &fakeFileClient{files: tc.files, searchErr: tc.searchErr}
+			svc := &PdfServiceImpl{store: pdfStore, storageClient: client, log: slog.New(slog.NewTextHandler(&logs, nil))}
+			opts := &options.CreateOptions{Context: context.Background(), Auth: fakeAuth{}}
 
 			var archive bytes.Buffer
 
-			err := svc.DownloadAgentPdfArchive(context.Background(), &options.CreateOptions{Auth: fakeAuth{}}, tc.request, &archive)
+			err := svc.DownloadPdfArchive(context.Background(), opts, tc.request, &archive)
 			if tc.wantCode != codes.OK {
 				if got := errors.Code(err); got != tc.wantCode {
 					t.Fatalf("code = %v, want %v (err: %v)", got, tc.wantCode, err)
 				}
 			} else if err != nil {
 				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if (pdfStore.request != nil) != tc.wantStore {
+				t.Fatalf("store called = %v, want %v", pdfStore.request != nil, tc.wantStore)
+			}
+
+			if tc.wantStore && pdfStore.opts != opts {
+				t.Errorf("store got opts %p, want %p", pdfStore.opts, opts)
 			}
 
 			if len(client.searches) != tc.wantSearches {
@@ -198,6 +254,10 @@ func TestDownloadAgentPdfArchive(t *testing.T) {
 					t.Errorf("searched ids = %v, want %v", search.GetId(), tc.wantIDs)
 				}
 
+				if search.GetSize() != int32(len(tc.wantIDs)) || search.GetPage() != 1 {
+					t.Errorf("page/size = %d/%d, want 1/%d", search.GetPage(), search.GetSize(), len(tc.wantIDs))
+				}
+
 				if search.GetType() != storage.ScreenrecordingType_PDF {
 					t.Errorf("type = %v, want PDF", search.GetType())
 				}
@@ -205,32 +265,61 @@ func TestDownloadAgentPdfArchive(t *testing.T) {
 				if search.GetChannel() != storage.ScreenrecordingChannel_SCREENRECORDING {
 					t.Errorf("channel = %v, want SCREENRECORDING", search.GetChannel())
 				}
-
-				if pdfStore.domainID != 7 {
-					t.Errorf("domain = %d, want 7", pdfStore.domainID)
-				}
 			}
 
 			if tc.wantEntries != nil {
 				assertArchiveEntries(t, archive.Bytes(), tc.wantEntries)
 			}
+
+			if tc.wantLog != "" && !strings.Contains(logs.String(), tc.wantLog) {
+				t.Errorf("log %q does not contain %q", logs.String(), tc.wantLog)
+			}
+
+			if tc.wantLog == "" && strings.Contains(logs.String(), "did not return") {
+				t.Errorf("unexpected missing-files log: %q", logs.String())
+			}
 		})
 	}
 }
 
-func TestDownloadAgentPdfArchivePassesRequestToStore(t *testing.T) {
-	pdfStore := &fakePdfStore{records: []*domain.HistoryRecord{{FileID: 10, Name: "a.pdf"}}}
-	client := &fakeFileClient{pages: [][]*storage.File{{pdfFile(10)}}}
-	svc := &PdfServiceImpl{store: pdfStore, storageClient: client}
-	request := &domain.DownloadAgentPdfArchiveRequest{AgentID: 1, FileIDs: []int64{10}, From: 100, To: 200}
+func TestDownloadPdfArchivePassesFilterToStore(t *testing.T) {
+	pdfStore := &fakePdfStore{records: []*domain.HistoryRecord{record(10, "a.pdf")}}
+	client := &fakeFileClient{files: []*storage.File{pdfFile(10)}}
+	svc := &PdfServiceImpl{store: pdfStore, storageClient: client, log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	request := &domain.DownloadPdfArchiveRequest{AgentID: 1, FileIDs: []int64{10}, From: 100, To: 200}
 
 	var archive bytes.Buffer
-	if err := svc.DownloadAgentPdfArchive(context.Background(), &options.CreateOptions{Auth: fakeAuth{}}, request, &archive); err != nil {
+	if err := svc.DownloadPdfArchive(context.Background(), &options.CreateOptions{Auth: fakeAuth{}}, request, &archive); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if pdfStore.request != request {
-		t.Errorf("store request = %+v, want %+v", pdfStore.request, request)
+	want := domain.PdfArchiveRequestOptions{AgentID: 1, FileIDs: []int64{10}, From: 100, To: 200, Limit: maxPdfArchiveFiles + 1}
+	got := pdfStore.request
+
+	if got.AgentID != want.AgentID || !slices.Equal(got.FileIDs, want.FileIDs) || got.From != want.From || got.To != want.To || got.Limit != want.Limit {
+		t.Errorf("store filter = %+v, want %+v", *got, want)
+	}
+}
+
+func TestArchiveEntryName(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		mimeType string
+		want     string
+	}{
+		{"keeps matching extension", "a.pdf", "application/pdf", "a.pdf"},
+		{"adds extension from mime", "shot", "image/png; charset=binary", "shot.png"},
+		{"strips directories and colons", "../dir/12:30.png", "image/png", "12-30.png"},
+		{"empty name uses fallback", "", "image/jpeg", "screenshot.jpg"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := archiveEntryName(tc.input, tc.mimeType, "screenshot"); got != tc.want {
+				t.Errorf("archiveEntryName(%q, %q) = %q, want %q", tc.input, tc.mimeType, got, tc.want)
+			}
+		})
 	}
 }
 
