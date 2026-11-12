@@ -362,7 +362,7 @@ func (s *PdfServiceImpl) searchPdfArchiveFiles(ctx context.Context, fileIDs []in
 		response, err := s.storageClient.SearchScreenRecordings(ctx, &storage.SearchScreenRecordingsRequest{
 			Id:      batch,
 			Page:    1,
-			Size:    int32(len(batch)),
+			Size:    pageSize,
 			Sort:    "+id",
 			Type:    storage.ScreenrecordingType_PDF,
 			Channel: storage.ScreenrecordingChannel_SCREENRECORDING,

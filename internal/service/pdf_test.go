@@ -254,8 +254,8 @@ func TestDownloadPdfArchive(t *testing.T) {
 					t.Errorf("searched ids = %v, want %v", search.GetId(), tc.wantIDs)
 				}
 
-				if search.GetSize() != int32(len(tc.wantIDs)) || search.GetPage() != 1 {
-					t.Errorf("page/size = %d/%d, want 1/%d", search.GetPage(), search.GetSize(), len(tc.wantIDs))
+				if search.GetSize() != 1000 || search.GetPage() != 1 {
+					t.Errorf("page/size = %d/%d, want 1/1000", search.GetPage(), search.GetSize())
 				}
 
 				if search.GetType() != storage.ScreenrecordingType_PDF {
