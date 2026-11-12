@@ -1,11 +1,13 @@
 package service
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"io"
 	"log/slog"
 	"path"
+	"slices"
 	"strings"
 	"time"
 
@@ -31,6 +33,8 @@ type PdfService interface {
 	DownloadScreenrecordingArchive(ctx context.Context, opts *options.CreateOptions, req *domain.DownloadScreenrecordingArchiveRequest, w io.Writer) error
 	PrepareScreenshotArchiveMetadata(ctx context.Context, req *domain.DownloadScreenshotArchiveRequest) (*domain.ArchiveMetadata, error)
 	DownloadScreenshotArchive(ctx context.Context, opts *options.CreateOptions, req *domain.DownloadScreenshotArchiveRequest, w io.Writer) error
+	PreparePdfArchiveMetadata(ctx context.Context, req *domain.DownloadPdfArchiveRequest) (*domain.ArchiveMetadata, error)
+	DownloadPdfArchive(ctx context.Context, opts *options.CreateOptions, req *domain.DownloadPdfArchiveRequest, w io.Writer) error
 
 	// Call methods
 	GenerateCallExport(ctx context.Context, opts *options.CreateOptions, req *domain.GenerateCallExportRequest) (*domain.PdfExportMetadata, error)
@@ -200,17 +204,12 @@ func (s *PdfServiceImpl) DownloadScreenrecordingArchive(ctx context.Context, opt
 
 // screenrecordingArchiveEntryName builds a safe ZIP entry name.
 func screenrecordingArchiveEntryName(file *storage.File) string {
-	return archiveEntryName(file, "screenrecording")
+	return archiveEntryName(cmp.Or(file.GetViewName(), file.GetName()), file.GetMimeType(), "screenrecording")
 }
 
 // archiveEntryName builds a safe ZIP entry name and restores the extension
 // from the file MIME type when storage metadata does not include it.
-func archiveEntryName(file *storage.File, fallback string) string {
-	name := file.GetViewName()
-	if name == "" {
-		name = file.GetName()
-	}
-
+func archiveEntryName(name, mimeType, fallback string) string {
 	// Remove directory components to prevent paths inside the archive.
 	name = path.Base(strings.ReplaceAll(name, "\\", "/"))
 	name = strings.ReplaceAll(name, ":", "-")
@@ -218,8 +217,8 @@ func archiveEntryName(file *storage.File, fallback string) string {
 		name = fallback
 	}
 
-	mimeType := strings.TrimSpace(
-		strings.SplitN(file.GetMimeType(), ";", 2)[0],
+	mimeType = strings.TrimSpace(
+		strings.SplitN(mimeType, ";", 2)[0],
 	)
 	expectedExt := util.GetFileExt(mimeType)
 
@@ -319,7 +318,7 @@ func (s *PdfServiceImpl) DownloadScreenshotArchive(ctx context.Context, opts *op
 
 	for _, file := range files {
 		fileID := file.GetId()
-		name := uniqueArchiveEntryName(archiveEntryName(file, "screenshot"), usedNames)
+		name := uniqueArchiveEntryName(archiveEntryName(cmp.Or(file.GetViewName(), file.GetName()), file.GetMimeType(), "screenshot"), usedNames)
 
 		entries = append(entries, util.ZipStreamEntry{
 			Name:       name,
@@ -332,6 +331,144 @@ func (s *PdfServiceImpl) DownloadScreenshotArchive(ctx context.Context, opts *op
 
 	if err := util.StreamZipArchive(w, entries); err != nil {
 		return fmt.Errorf("stream screenshot ZIP archive: %w", err)
+	}
+
+	return nil
+}
+
+// --- PDF Archive (ZIP) Exports ---
+
+func (s *PdfServiceImpl) PreparePdfArchiveMetadata(_ context.Context, req *domain.DownloadPdfArchiveRequest) (*domain.ArchiveMetadata, error) {
+	if req.AgentID == 0 {
+		return nil, errors.BadRequest("agent_id is required")
+	}
+
+	name := fmt.Sprintf("archive_pdfs_agent_%d_%s.zip", req.AgentID, time.Now().Format("2006-01-02_15_04_05"))
+
+	return &domain.ArchiveMetadata{
+		Name:     name,
+		MimeType: "application/zip",
+	}, nil
+}
+
+const maxPdfArchiveFiles = 1000
+
+func (s *PdfServiceImpl) searchPdfArchiveFiles(ctx context.Context, fileIDs []int64) ([]*storage.File, error) {
+	const pageSize = 1000
+
+	files := make([]*storage.File, 0, len(fileIDs))
+
+	for batch := range slices.Chunk(fileIDs, pageSize) {
+		response, err := s.storageClient.SearchScreenRecordings(ctx, &storage.SearchScreenRecordingsRequest{
+			Id:      batch,
+			Page:    1,
+			Size:    pageSize,
+			Sort:    "+id",
+			Type:    storage.ScreenrecordingType_PDF,
+			Channel: storage.ScreenrecordingChannel_SCREENRECORDING,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("SearchScreenRecordings failed: %w", err)
+		}
+
+		files = append(files, response.GetItems()...)
+	}
+
+	if len(files) == 0 {
+		return nil, errors.NotFound("no PDF files found")
+	}
+
+	return files, nil
+}
+
+func (s *PdfServiceImpl) DownloadPdfArchive(ctx context.Context, opts *options.CreateOptions, req *domain.DownloadPdfArchiveRequest, w io.Writer) error {
+	if req.AgentID == 0 {
+		return errors.BadRequest("agent_id is required")
+	}
+
+	if len(req.FileIDs) > maxPdfArchiveFiles {
+		return errors.BadRequest(fmt.Sprintf("too many file_ids: at most %d PDF files per archive", maxPdfArchiveFiles))
+	}
+
+	records, err := s.store.ListDonePdfExports(opts, &domain.PdfArchiveRequestOptions{
+		AgentID: req.AgentID,
+		FileIDs: req.FileIDs,
+		From:    req.From,
+		To:      req.To,
+		Limit:   maxPdfArchiveFiles + 1,
+	})
+	if err != nil {
+		return fmt.Errorf("ListDonePdfExports failed: %w", err)
+	}
+
+	if len(records) == 0 {
+		return errors.NotFound("no completed PDF exports found")
+	}
+
+	if len(records) > maxPdfArchiveFiles {
+		return errors.BadRequest(fmt.Sprintf("too many PDF exports: at most %d PDF files per archive, narrow the date range", maxPdfArchiveFiles))
+	}
+
+	fileIDs := make([]int64, 0, len(records))
+	names := make(map[int64]string, len(records))
+
+	for _, record := range records {
+		if _, ok := names[record.FileID]; ok {
+			continue
+		}
+
+		fileIDs = append(fileIDs, record.FileID)
+		names[record.FileID] = record.Name
+	}
+
+	ctx = util.ForwardIncomingHeaders(ctx, []string{"authorization", "x-req-id", "x-webitel-access"})
+
+	files, err := s.searchPdfArchiveFiles(ctx, fileIDs)
+	if err != nil {
+		return err
+	}
+
+	if len(files) != len(fileIDs) {
+		returned := make(map[int64]struct{}, len(files))
+		for _, file := range files {
+			returned[file.GetId()] = struct{}{}
+		}
+
+		var missing []int64
+
+		for _, fileID := range fileIDs {
+			if _, ok := returned[fileID]; !ok {
+				missing = append(missing, fileID)
+			}
+		}
+
+		s.log.WarnContext(ctx, "storage did not return all requested PDF files",
+			"agent_id", req.AgentID,
+			"requested", len(fileIDs),
+			"returned", len(files),
+			"missing_file_ids", missing,
+		)
+	}
+
+	domainID := opts.Auth.GetDomainId()
+	entries := make([]util.ZipStreamEntry, 0, len(files))
+	usedNames := make(map[string]struct{}, len(files))
+
+	for _, file := range files {
+		fileID := file.GetId()
+		name := uniqueArchiveEntryName(archiveEntryName(names[fileID], file.GetMimeType(), "pdf"), usedNames)
+
+		entries = append(entries, util.ZipStreamEntry{
+			Name:       name,
+			ModifiedAt: file.GetUploadedAt(),
+			Open: func() (io.ReadCloser, error) {
+				return util.NewStorageFileReader(ctx, s.storageClient, domainID, fileID)
+			},
+		})
+	}
+
+	if err := util.StreamZipArchive(w, entries); err != nil {
+		return fmt.Errorf("stream PDF ZIP archive: %w", err)
 	}
 
 	return nil
