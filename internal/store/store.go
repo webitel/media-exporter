@@ -27,6 +27,9 @@ type PdfStore interface {
 	// GetCallPdfExportHistory retrieves paginated history for calls by CallID.
 	GetCallPdfExportHistory(req *domain.CallHistoryRequestOptions) (*domain.HistoryResponse, error)
 
+	// ListDonePdfExports retrieves all completed PDF exports of an agent that still have a stored file.
+	ListDonePdfExports(opts *options.CreateOptions, req *domain.PdfArchiveRequestOptions) ([]*domain.HistoryRecord, error)
+
 	// DeletePdfExportRecord removes a specific record from the history.
 	DeletePdfExportRecord(opts *options.DeleteOptions, recordID int64) error
 }

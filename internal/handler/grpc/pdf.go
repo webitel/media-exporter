@@ -271,6 +271,45 @@ func (h *PdfHandler) DownloadScreenshotArchive(req *pdfapi.DownloadScreenshotArc
 	return h.service.DownloadScreenshotArchive(ctx, opts, archiveRequest, w)
 }
 
+// --- PDF Archive (ZIP) Exports ---
+
+func (h *PdfHandler) DownloadPdfArchive(req *pdfapi.DownloadPdfArchiveRequest, stream pdfapi.PdfService_DownloadPdfArchiveServer) error {
+	if req.GetAgentId() == 0 {
+		return errors.BadRequest("agent_id is required")
+	}
+
+	ctx := stream.Context()
+
+	opts, err := options.NewCreateOptions(ctx)
+	if err != nil {
+		return err
+	}
+
+	archiveRequest := &domain.DownloadPdfArchiveRequest{
+		AgentID: req.GetAgentId(),
+		FileIDs: req.GetFileIds(),
+		From:    req.GetFrom(),
+		To:      req.GetTo(),
+	}
+
+	archiveMeta, err := h.service.PreparePdfArchiveMetadata(ctx, archiveRequest)
+	if err != nil {
+		return err
+	}
+
+	if err := googlegrpc.SetHeader(ctx, metadata.Pairs("filename", archiveMeta.Name, "format", "zip")); err != nil {
+		return err
+	}
+
+	w := &chunkWriter{
+		send: func(chunk []byte) error {
+			return stream.Send(&pdfapi.DownloadPdfArchiveResponse{Data: chunk})
+		},
+	}
+
+	return h.service.DownloadPdfArchive(ctx, opts, archiveRequest, w)
+}
+
 // --- Call Screenrecording Archive (ZIP) Exports ---
 
 func (h *PdfHandler) DownloadCallScreenrecordingArchive(req *pdfapi.DownloadCallScreenrecordingArchiveRequest, stream pdfapi.PdfService_DownloadCallScreenrecordingArchiveServer) error {
